@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Camera, CheckCircle2, RotateCcw, TriangleAlert } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 type PhotoQuality = "good" | "blurry" | null;
 
@@ -23,6 +24,7 @@ export default function ScanPage() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [cameraError, setCameraError] = useState("");
   const [flash, setFlash] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     async function startCamera() {
@@ -341,8 +343,18 @@ export default function ScanPage() {
                 href="/analysing"
                 className="block w-full rounded-2xl bg-sky-600 py-5 text-center text-lg font-semibold text-white shadow-lg transition hover:bg-sky-700"
               >
-                Use Photo
-              </Link>
+<button
+  type="button"
+  onClick={() => {
+    if (photo) {
+      sessionStorage.setItem("skinchecker_photo", photo);
+      router.push("/analysing");
+    }
+  }}
+  className="block w-full rounded-2xl bg-sky-600 py-5 text-center text-lg font-semibold text-white shadow-lg transition hover:bg-sky-700"
+>
+  Use Photo
+</button>
 
               <button
                 type="button"
