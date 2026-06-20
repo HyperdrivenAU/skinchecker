@@ -59,7 +59,7 @@ export default function AnalysingPage() {
         setCompletedSteps(steps.length);
 
         setTimeout(() => {
-          router.push("/result");
+          router.replace("/result");
         }, 700);
       } catch {
         window.clearInterval(stepTimer);
