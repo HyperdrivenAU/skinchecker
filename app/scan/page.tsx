@@ -16,33 +16,36 @@ export default function ScanPage() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [cameraError, setCameraError] = useState("");
 
-  useEffect(() => {
-    async function startCamera() {
-      try {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-          audio: false,
-        });
+useEffect(() => {
+  let mediaStream: MediaStream | null = null;
 
-        setStream(mediaStream);
+  async function startCamera() {
+    try {
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false,
+      });
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-        }
-      } catch {
-        setCameraError(
-          "We could not access your camera. Please allow camera access or choose a photo from your device."
-        );
+      setStream(mediaStream);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
       }
+    } catch {
+      setCameraError(
+        "We could not access your camera. Please allow camera access or choose a photo from your device."
+      );
     }
+  }
 
-    startCamera();
+  startCamera();
 
-    return () => {
-      stream?.getTracks().forEach((track) => track.stop());
-      audioContextRef.current?.close();
-    };
-  }, [stream]);
+  return () => {
+    mediaStream?.getTracks().forEach((track) => track.stop());
+    audioContextRef.current?.close();
+  };
+}, []);
+
 
   function beep(frequency = 880, duration = 120) {
     const AudioContextClass =
