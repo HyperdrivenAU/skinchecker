@@ -160,26 +160,9 @@ const canContinue =
 >
   Email My Report
 </button>
-const image = sessionStorage.getItem("skinchecker_photo");
-const result = JSON.parse(sessionStorage.getItem("skinchecker_result") || "{}");
 
-await fetch("/api/email-report", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    givenNames,
-    surname,
-    dob,
-    mobile,
-    email,
-    image,
-    result,
-  }),
-});
-
-window.location.href = "/result";
           <Link
-            href="/consent"
+            href="/result"
             className="mt-5 block text-center text-sm text-slate-500 hover:text-slate-700"
           >
             ← Back
