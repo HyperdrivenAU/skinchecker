@@ -339,11 +339,7 @@ export default function ScanPage() {
         <div className="mt-auto pt-10">
           {photo ? (
             <div className="space-y-4">
-              <Link
-                href="/analysing"
-                className="block w-full rounded-2xl bg-sky-600 py-5 text-center text-lg font-semibold text-white shadow-lg transition hover:bg-sky-700"
-              >
-<button
+                <button
   type="button"
   onClick={() => {
     if (photo) {
