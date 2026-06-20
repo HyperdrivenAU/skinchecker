@@ -331,7 +331,6 @@ page.drawText(statusLabel, {
       to: email,
       subject: "Your SkinChecker.app Report",
       html: `
-        html: `
 <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;padding:24px;color:#0f172a">
 
   <h2 style="margin-top:0;">Your SkinChecker.app Report</h2>
