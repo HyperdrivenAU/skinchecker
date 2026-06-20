@@ -28,7 +28,11 @@ function wrapText(text: string, maxChars: number) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, firstName, image, result } = await request.json();
+    const { email, givenNames, surname, dob, mobile, image, result } = await request.json();
+
+const patientName = `${givenNames || ""} ${surname || ""}`.trim();
+const safeDob = dob || "DOB not supplied";
+const pdfFilename = `${surname || "UNKNOWN"}, ${givenNames || "Patient"} - ${safeDob} - SkinChecker Report.pdf`;
 
     if (!email || !image || !result) {
       return NextResponse.json(
@@ -72,7 +76,7 @@ export async function POST(request: NextRequest) {
       page.drawImage(logo, { x: 42, y: 782, width: 210, height: 50 });
     }
 
-    page.drawText("AI Skin Assessment Report", {
+    page.drawText("SkinChecker.app Report", {
       x: 42,
       y: 735,
       size: 24,
@@ -103,13 +107,22 @@ export async function POST(request: NextRequest) {
       color: reportColour,
     });
 
-    page.drawText(String(result.trafficLight || "").toUpperCase(), {
-      x: 472,
-      y: 654,
-      size: 13,
-      font: bold,
-      color: reportColour,
-    });
+const statusLabel =
+  result.trafficLight === "green"
+    ? "Routine observation"
+    : result.trafficLight === "yellow"
+    ? "Monitor closely"
+    : result.trafficLight === "red"
+    ? "Medical review recommended"
+    : "Urgent medical review";
+
+page.drawText(statusLabel, {
+  x: 395,
+  y: 654,
+  size: 13,
+  font: bold,
+  color: reportColour,
+});
 
     page.drawRectangle({
       x: 42,
@@ -316,24 +329,58 @@ export async function POST(request: NextRequest) {
         process.env.REPORT_FROM_EMAIL ||
         "SkinChecker <info@skinchecker.app>",
       to: email,
-      subject: "Your SkinChecker Assessment Report",
+      subject: "Your SkinChecker.app Report",
       html: `
-        <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;padding:24px;color:#0f172a">
-          <h2>Your SkinChecker Assessment Report</h2>
-          <p>Hi ${firstName || "there"},</p>
-          <p>Your AI-assisted SkinChecker report is attached as a PDF.</p>
-          <div style="padding:16px;border-radius:14px;background:#f0f9ff;border:1px solid #bae6fd;margin:20px 0">
-            <strong>${result.headline || "SkinChecker Assessment"}</strong>
-            <p>${result.recommendation || ""}</p>
-          </div>
-          <p style="font-size:13px;color:#64748b">
-            This assessment is generated using artificial intelligence from a single photograph. It is not a diagnosis and must not replace assessment by a qualified healthcare professional.
-          </p>
-        </div>
-      `,
+        html: `
+<div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;padding:24px;color:#0f172a">
+
+  <h2 style="margin-top:0;">Your SkinChecker.app Report</h2>
+
+  <p>Hi ${givenNames || "there"},</p>
+
+  <p>Thank you for using <strong>SkinChecker.app</strong>.</p>
+
+  <p>Your <strong>SkinChecker.app Report</strong> is attached as a PDF for your records.</p>
+
+  <div style="padding:18px;border-radius:14px;background:#f0f9ff;border:1px solid #bae6fd;margin:24px 0">
+    <strong style="font-size:18px;">${result.headline}</strong>
+    <p style="margin-bottom:0;">${result.recommendation}</p>
+  </div>
+
+  <p>
+    Please remember that this report has been generated using artificial
+    intelligence from a single photograph. It is not a diagnosis and should
+    not replace assessment by a qualified healthcare professional.
+  </p>
+
+  <p>
+    If your report recommends medical review, or if you have any concerns
+    about a skin lesion, please arrange an appointment with your doctor or
+    skin cancer clinic.
+  </p>
+
+  <p>
+    Best regards,<br>
+    <strong>The SkinChecker.app Team</strong>
+  </p>
+
+  <p>
+    info@skinchecker.app<br>
+    https://skinchecker.app
+  </p>
+
+  <div style="margin-top:30px;text-align:center;">
+    <img src="https://skinchecker.app/logo-email.png"
+         alt="SkinChecker.app"
+         width="220">
+  </div>
+
+</div>
+`,
+
       attachments: [
         {
-          filename: "SkinChecker-Assessment.pdf",
+          filename: pdfFilename,
           content: pdfBase64,
         },
       ],
