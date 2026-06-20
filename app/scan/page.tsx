@@ -3,53 +3,55 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Camera, RotateCcw } from "lucide-react";
+import { Camera, CheckCircle2, RotateCcw, TriangleAlert } from "lucide-react";
+
+type PhotoQuality = "good" | "blurry" | null;
 
 export default function ScanPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  const [stream, setStream] = useState<MediaStream | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [photoQuality, setPhotoQuality] = useState<PhotoQuality>(null);
   const [delay, setDelay] = useState(5);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [cameraError, setCameraError] = useState("");
+  const [flash, setFlash] = useState(false);
 
-useEffect(() => {
-  let mediaStream: MediaStream | null = null;
+  useEffect(() => {
+    let mediaStream: MediaStream | null = null;
 
-  async function startCamera() {
-    try {
-      mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-        audio: false,
-      });
+    async function startCamera() {
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: false,
+        });
 
-      setStream(mediaStream);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+        }
+      } catch {
+        setCameraError(
+          "We could not access your camera. Please allow camera access or choose a photo from your device."
+        );
       }
-    } catch {
-      setCameraError(
-        "We could not access your camera. Please allow camera access or choose a photo from your device."
-      );
     }
-  }
 
-  startCamera();
+    startCamera();
 
-  return () => {
-    mediaStream?.getTracks().forEach((track) => track.stop());
-    audioContextRef.current?.close();
-  };
-}, []);
-
+    return () => {
+      mediaStream?.getTracks().forEach((track) => track.stop());
+      audioContextRef.current?.close();
+    };
+  }, []);
 
   function beep(frequency = 880, duration = 120) {
     const AudioContextClass =
-      window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
 
     if (!AudioContextClass) return;
 
@@ -82,6 +84,67 @@ useEffect(() => {
     setTimeout(() => beep(700, 100), 90);
   }
 
+  function estimateSharpness(canvas: HTMLCanvasElement) {
+    const sampleCanvas = document.createElement("canvas");
+    const sampleContext = sampleCanvas.getContext("2d");
+
+    if (!sampleContext) return 999;
+
+    const maxWidth = 220;
+    const scale = Math.min(1, maxWidth / canvas.width);
+
+    sampleCanvas.width = Math.max(1, Math.floor(canvas.width * scale));
+    sampleCanvas.height = Math.max(1, Math.floor(canvas.height * scale));
+
+    sampleContext.drawImage(
+      canvas,
+      0,
+      0,
+      sampleCanvas.width,
+      sampleCanvas.height
+    );
+
+    const { data, width, height } = sampleContext.getImageData(
+      0,
+      0,
+      sampleCanvas.width,
+      sampleCanvas.height
+    );
+
+    let total = 0;
+    let totalSquared = 0;
+    let count = 0;
+
+    function greyAt(x: number, y: number) {
+      const index = (y * width + x) * 4;
+      return (
+        data[index] * 0.299 +
+        data[index + 1] * 0.587 +
+        data[index + 2] * 0.114
+      );
+    }
+
+    for (let y = 1; y < height - 1; y += 1) {
+      for (let x = 1; x < width - 1; x += 1) {
+        const centre = greyAt(x, y) * 4;
+        const neighbours =
+          greyAt(x - 1, y) +
+          greyAt(x + 1, y) +
+          greyAt(x, y - 1) +
+          greyAt(x, y + 1);
+
+        const laplacian = centre - neighbours;
+
+        total += laplacian;
+        totalSquared += laplacian * laplacian;
+        count += 1;
+      }
+    }
+
+    const mean = total / count;
+    return totalSquared / count - mean * mean;
+  }
+
   function capturePhoto() {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -96,8 +159,16 @@ useEffect(() => {
 
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+    const sharpness = estimateSharpness(canvas);
     const imageData = canvas.toDataURL("image/jpeg", 0.92);
-    setPhoto(imageData);
+
+    setFlash(true);
+
+    setTimeout(() => {
+      setFlash(false);
+      setPhoto(imageData);
+      setPhotoQuality(sharpness < 45 ? "blurry" : "good");
+    }, 130);
   }
 
   function startCountdown() {
@@ -129,6 +200,7 @@ useEffect(() => {
 
   function retakePhoto() {
     setPhoto(null);
+    setPhotoQuality(null);
   }
 
   return (
@@ -179,8 +251,12 @@ useEffect(() => {
                 className="aspect-[4/3] w-full object-cover"
               />
 
+              {flash && (
+                <div className="absolute inset-0 z-20 bg-white"></div>
+              )}
+
               {countdown !== null && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40">
                   <div className="text-8xl font-bold text-white">
                     {countdown}
                   </div>
@@ -197,6 +273,25 @@ useEffect(() => {
         </div>
 
         <canvas ref={canvasRef} className="hidden" />
+
+        {photo && photoQuality === "good" && (
+          <div className="mt-5 flex items-start gap-3 rounded-2xl border border-green-200 bg-green-50 p-4 text-green-800">
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+            <p className="text-sm font-medium">
+              Photo looks suitable for assessment.
+            </p>
+          </div>
+        )}
+
+        {photo && photoQuality === "blurry" && (
+          <div className="mt-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+            <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0" />
+            <p className="text-sm font-medium">
+              This photo may be blurry. For the most accurate assessment, please
+              retake it if possible.
+            </p>
+          </div>
+        )}
 
         {!photo && (
           <div className="mt-8">
