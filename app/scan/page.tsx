@@ -25,15 +25,17 @@ export default function ScanPage() {
 
     async function startCamera() {
       try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-          streamRef.current = mediaStream;
-            video: { facingMode: "environment" },
-          audio: false,
-        });
+       mediaStream = await navigator.mediaDevices.getUserMedia({
+  video: { facingMode: "environment" },
+  audio: false,
+});
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-        }
+streamRef.current = mediaStream;
+
+if (videoRef.current) {
+  videoRef.current.srcObject = mediaStream;
+}
+
       } catch {
         setCameraError(
           "We could not access your camera. Please allow camera access or choose a photo from your device."
