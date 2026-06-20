@@ -172,7 +172,11 @@ export default function ResultPage() {
           </p>
 
         </div>
-
+<div className="mt-8 rounded-2xl border border-green-200 bg-green-50 p-5">
+  <p className="font-semibold text-green-800">
+    ✓ A copy of this report has been emailed to you.
+  </p>
+</div>
         <div className="mt-10 space-y-4">
 
           <button className="w-full rounded-2xl bg-sky-600 py-5 text-lg font-semibold text-white shadow-lg">

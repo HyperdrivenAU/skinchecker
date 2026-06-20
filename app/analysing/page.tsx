@@ -54,7 +54,21 @@ export default function AnalysingPage() {
           "skinchecker_result",
           JSON.stringify(result)
         );
+const firstName = sessionStorage.getItem("skinchecker_firstName");
+const email = sessionStorage.getItem("skinchecker_email");
 
+await fetch("/api/email-report", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    firstName,
+    email,
+    image,
+    result,
+  }),
+});
         window.clearInterval(stepTimer);
         setCompletedSteps(steps.length);
 

@@ -69,8 +69,14 @@ export default function DetailsPage() {
         </div>
 
         <div className="mt-auto pt-12">
-          <Link
-            href={canContinue ? "/scan" : "#"}
+<button
+  type="button"
+  disabled={!canContinue}
+  onClick={() => {
+    sessionStorage.setItem("skinchecker_firstName", firstName);
+    sessionStorage.setItem("skinchecker_email", email);
+    window.location.href = "/scan";
+  }}
             className={`block w-full rounded-2xl py-5 text-center text-lg font-semibold transition ${
               canContinue
                 ? "bg-sky-600 text-white shadow-lg hover:bg-sky-700"
@@ -78,7 +84,7 @@ export default function DetailsPage() {
             }`}
           >
             Continue
-          </Link>
+          </button>
 
           <Link
             href="/consent"
