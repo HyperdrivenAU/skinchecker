@@ -114,10 +114,10 @@ export default function ScanPage() {
           Take a clear photo
         </h1>
 
-        <p className="mt-4 text-lg leading-8 text-slate-600">
-          Use good lighting, keep the camera steady and try to fill the frame
-          with the mole or skin lesion.
-        </p>
+<p className="mt-4 text-lg leading-8 text-slate-600">
+  For best results, clean your camera lens first. Use good lighting, keep the
+  camera steady and try to fill the frame with the mole or skin lesion.
+</p>
 
         <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-sm">
           {photo ? (
