@@ -8,6 +8,7 @@ import { Camera, RotateCcw } from "lucide-react";
 export default function ScanPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
@@ -19,9 +20,7 @@ export default function ScanPage() {
     async function startCamera() {
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "environment",
-          },
+          video: { facingMode: "environment" },
           audio: false,
         });
 
@@ -41,8 +40,44 @@ export default function ScanPage() {
 
     return () => {
       stream?.getTracks().forEach((track) => track.stop());
+      audioContextRef.current?.close();
     };
-  }, []);
+  }, [stream]);
+
+  function beep(frequency = 880, duration = 120) {
+    const AudioContextClass =
+      window.AudioContext || window.webkitAudioContext;
+
+    if (!AudioContextClass) return;
+
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContextClass();
+    }
+
+    const audioContext = audioContextRef.current;
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.value = frequency;
+
+    gain.gain.setValueAtTime(0.08, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(
+      0.001,
+      audioContext.currentTime + duration / 1000
+    );
+
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + duration / 1000);
+  }
+
+  function shutterSound() {
+    beep(1200, 80);
+    setTimeout(() => beep(700, 100), 90);
+  }
 
   function capturePhoto() {
     const video = videoRef.current;
@@ -64,11 +99,13 @@ export default function ScanPage() {
 
   function startCountdown() {
     if (delay === 0) {
+      shutterSound();
       capturePhoto();
       return;
     }
 
     setCountdown(delay);
+    beep();
 
     let current = delay;
 
@@ -78,9 +115,11 @@ export default function ScanPage() {
       if (current <= 0) {
         clearInterval(timer);
         setCountdown(null);
+        shutterSound();
         capturePhoto();
       } else {
         setCountdown(current);
+        beep(current === 1 ? 1200 : 880, current === 1 ? 180 : 120);
       }
     }, 1000);
   }
@@ -114,10 +153,11 @@ export default function ScanPage() {
           Take a clear photo
         </h1>
 
-<p className="mt-4 text-lg leading-8 text-slate-600">
-  For best results, clean your camera lens first. Use good lighting, keep the
-  camera steady and try to fill the frame with the mole or skin lesion.
-</p>
+        <p className="mt-4 text-lg leading-8 text-slate-600">
+          For best results, clean your camera lens first. Remove any obstructions
+          such as hair. Use good lighting, keep the camera steady and try to fill
+          the frame with the mole or skin lesion.
+        </p>
 
         <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-sm">
           {photo ? (
