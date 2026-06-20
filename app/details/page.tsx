@@ -49,7 +49,7 @@ export default function DetailsPage() {
             <input
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              className="w-full rounded-2xl border border-slate-300 px-5 py-4 text-lg outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100"
+              className="w-full rounded-2xl border border-slate-300 bg-white px-5 py-4 text-lg text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-sky-600 focus:ring-4 focus:ring-sky-100"
               placeholder="Your first name"
             />
           </div>
@@ -62,7 +62,7 @@ export default function DetailsPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-2xl border border-slate-300 px-5 py-4 text-lg outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100"
+              className="w-full rounded-2xl border border-slate-300 bg-white px-5 py-4 text-lg text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-sky-600 focus:ring-4 focus:ring-sky-100"
               placeholder="you@example.com"
             />
           </div>
