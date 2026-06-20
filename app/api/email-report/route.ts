@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
       borderColor: border,
       borderWidth: 1,
       color: rgb(0.98, 0.99, 1),
-      borderRadius: 16,
+      // borderRadius: 16,
     });
 
     page.drawImage(lesionImage, {
