@@ -18,6 +18,7 @@ export default function ScanPage() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [cameraError, setCameraError] = useState("");
   const [flash, setFlash] = useState(false);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     let mediaStream: MediaStream | null = null;
@@ -25,7 +26,8 @@ export default function ScanPage() {
     async function startCamera() {
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
+          streamRef.current = mediaStream;
+            video: { facingMode: "environment" },
           audio: false,
         });
 
@@ -41,11 +43,10 @@ export default function ScanPage() {
 
     startCamera();
 
-    return () => {
-      mediaStream?.getTracks().forEach((track) => track.stop());
-      audioContextRef.current?.close();
-    };
-  }, []);
+return () => {
+  streamRef.current?.getTracks().forEach((track) => track.stop());
+  audioContextRef.current?.close();
+};
 
   function beep(frequency = 880, duration = 120) {
     const AudioContextClass =
@@ -203,10 +204,11 @@ function retakePhoto() {
   setPhotoQuality(null);
 
   setTimeout(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
+    if (videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
       videoRef.current.play();
     }
-  }, 50);
+  }, 100);
 }
 
   return (
