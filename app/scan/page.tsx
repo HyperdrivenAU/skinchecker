@@ -46,7 +46,7 @@ export default function ScanPage() {
 
   function beep(frequency = 880, duration = 120) {
     const AudioContextClass =
-      window.AudioContext || window.webkitAudioContext;
+      window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
 
     if (!AudioContextClass) return;
 
