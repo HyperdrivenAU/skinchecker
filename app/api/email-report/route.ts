@@ -168,16 +168,16 @@ page.drawText(statusLabel, {
       // borderRadius: 16,
     });
 
-    page.drawImage(lesionImage, {
-      x: 52,
-      y: 345,
-      width: 215,
-      height: 155,
-    });
+page.drawImage(lesionImage, {
+  x: 42,
+  y: 360,
+  width: 255,
+  height: 190,
+});
 
     page.drawText("Assessment details", {
-      x: 305,
-      y: 500,
+      x: 325,
+      y: 520,
       size: 15,
       font: bold,
       color: navy,
@@ -185,8 +185,7 @@ page.drawText(statusLabel, {
 
     const details = [
       ["Image quality", result.imageQuality || "Not supplied"],
-      ["Assessment", result.trafficLight || "Not supplied"],
-      ["Confidence", `${result.confidence ?? "Not supplied"}%`],
+      ["Result", statusLabel],
     ];
 
     let detailY = 474;
@@ -331,9 +330,7 @@ page.drawText(statusLabel, {
       to: email,
       subject: "Your SkinChecker.app Report",
       html: `
-<div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;padding:24px;color:#0f172a">
-
-  <h2 style="margin-top:0;">Your SkinChecker.app Report</h2>
+<div style="font-family:Calibri,sans-serif;max-width:640px;margin:auto;padding:24px;color:#0f172a">
 
   <p>Hi ${givenNames || "there"},</p>
 
@@ -376,7 +373,19 @@ page.drawText(statusLabel, {
 
 </div>
 `,
+const qrPath = path.join(process.cwd(), "public", "qr-skinchecker.png");
 
+if (fs.existsSync(qrPath)) {
+  const qrBytes = fs.readFileSync(qrPath);
+  const qr = await pdf.embedPng(qrBytes);
+
+  page.drawImage(qr, {
+    x: 470,
+    y: 32,
+    width: 70,
+    height: 70,
+  });
+}
       attachments: [
         {
           filename: pdfFilename,
