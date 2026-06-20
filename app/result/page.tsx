@@ -179,9 +179,12 @@ export default function ResultPage() {
 </div>
         <div className="mt-10 space-y-4">
 
-          <button className="w-full rounded-2xl bg-sky-600 py-5 text-lg font-semibold text-white shadow-lg">
-            Save PDF Report
-          </button>
+          <Link
+  href="/details"
+  className="block w-full rounded-2xl bg-sky-600 py-5 text-center text-lg font-semibold text-white shadow-lg"
+>
+  Email My Report
+</Link>
 
           <Link
             href="/"

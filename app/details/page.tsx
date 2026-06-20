@@ -40,11 +40,11 @@ const canContinue =
         </div>
 
         <h1 className="text-4xl font-bold tracking-tight text-slate-900">
-  Patient Details
+  Your Details
 </h1>
 
 <p className="mt-4 text-lg leading-8 text-slate-600">
-  Please enter the patient's details. These will appear on the assessment
+  Please enter your details. These will appear on the assessment
   report and emailed results.
 </p>
 
@@ -139,7 +139,24 @@ onClick={() => {
           >
             Continue
           </button>
+const image = sessionStorage.getItem("skinchecker_photo");
+const result = JSON.parse(sessionStorage.getItem("skinchecker_result") || "{}");
 
+await fetch("/api/email-report", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    givenNames,
+    surname,
+    dob,
+    mobile,
+    email,
+    image,
+    result,
+  }),
+});
+
+window.location.href = "/result";
           <Link
             href="/consent"
             className="mt-5 block text-center text-sm text-slate-500 hover:text-slate-700"

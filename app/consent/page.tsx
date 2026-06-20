@@ -102,7 +102,7 @@ export default function ConsentPage() {
         <div className="mt-auto pt-12">
 
           <Link
-            href={canContinue ? "/details" : "#"}
+            href={canContinue ? "/scan" : "#"}
             className={`block w-full rounded-2xl py-5 text-center text-lg font-semibold transition ${
               canContinue
                 ? "bg-sky-600 text-white shadow-lg hover:bg-sky-700"
