@@ -7,9 +7,14 @@ import { Camera, CheckCircle2, RotateCcw, TriangleAlert } from "lucide-react";
 
 type PhotoQuality = "good" | "blurry" | null;
 
+type WebkitWindow = typeof window & {
+  webkitAudioContext?: typeof AudioContext;
+};
+
 export default function ScanPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
   const [photo, setPhoto] = useState<string | null>(null);
@@ -18,24 +23,21 @@ export default function ScanPage() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [cameraError, setCameraError] = useState("");
   const [flash, setFlash] = useState(false);
-  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
-    let mediaStream: MediaStream | null = null;
-
     async function startCamera() {
       try {
-       mediaStream = await navigator.mediaDevices.getUserMedia({
-  video: { facingMode: "environment" },
-  audio: false,
-});
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: false,
+        });
 
-streamRef.current = mediaStream;
+        streamRef.current = mediaStream;
 
-if (videoRef.current) {
-  videoRef.current.srcObject = mediaStream;
-}
-
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          await videoRef.current.play();
+        }
       } catch {
         setCameraError(
           "We could not access your camera. Please allow camera access or choose a photo from your device."
@@ -45,16 +47,23 @@ if (videoRef.current) {
 
     startCamera();
 
-return () => {
-  streamRef.current?.getTracks().forEach((track) => track.stop());
-  audioContextRef.current?.close();
-};
+    return () => {
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      audioContextRef.current?.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!photo && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [photo]);
 
   function beep(frequency = 880, duration = 120) {
     const AudioContextClass =
       window.AudioContext ||
-      (window as typeof window & { webkitAudioContext?: typeof AudioContext })
-        .webkitAudioContext;
+      (window as WebkitWindow).webkitAudioContext;
 
     if (!AudioContextClass) return;
 
@@ -107,16 +116,14 @@ return () => {
       sampleCanvas.height
     );
 
-    const { data, width, height } = sampleContext.getImageData(
+    const image = sampleContext.getImageData(
       0,
       0,
       sampleCanvas.width,
       sampleCanvas.height
     );
 
-    let total = 0;
-    let totalSquared = 0;
-    let count = 0;
+    const { data, width, height } = image;
 
     function greyAt(x: number, y: number) {
       const index = (y * width + x) * 4;
@@ -127,8 +134,12 @@ return () => {
       );
     }
 
-    for (let y = 1; y < height - 1; y += 1) {
-      for (let x = 1; x < width - 1; x += 1) {
+    let total = 0;
+    let totalSquared = 0;
+    let count = 0;
+
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
         const centre = greyAt(x, y) * 4;
         const neighbours =
           greyAt(x - 1, y) +
@@ -140,7 +151,7 @@ return () => {
 
         total += laplacian;
         totalSquared += laplacian * laplacian;
-        count += 1;
+        count++;
       }
     }
 
@@ -175,43 +186,40 @@ return () => {
   }
 
   function startCountdown() {
+    if (countdown !== null) return;
+
     if (delay === 0) {
       shutterSound();
       capturePhoto();
       return;
     }
 
-    setCountdown(delay);
+    let current = delay;
+    setCountdown(current);
     beep();
 
-    let current = delay;
-
-    const timer = setInterval(() => {
-      current -= 1;
+    const timer = window.setInterval(() => {
+      current--;
 
       if (current <= 0) {
-        clearInterval(timer);
+        window.clearInterval(timer);
         setCountdown(null);
         shutterSound();
         capturePhoto();
-      } else {
-        setCountdown(current);
-        beep(current === 1 ? 1200 : 880, current === 1 ? 180 : 120);
+        return;
       }
+
+      setCountdown(current);
+      beep(current === 1 ? 1200 : 880, current === 1 ? 180 : 120);
     }, 1000);
   }
 
-function retakePhoto() {
-  setPhoto(null);
-  setPhotoQuality(null);
-
-  setTimeout(() => {
-    if (videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-      videoRef.current.play();
-    }
-  }, 100);
-}
+  function retakePhoto() {
+    setPhoto(null);
+    setPhotoQuality(null);
+    setCountdown(null);
+    setFlash(false);
+  }
 
   return (
     <main className="min-h-screen bg-white">
@@ -230,7 +238,7 @@ function retakePhoto() {
             Step 3 of 5
           </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-            <div className="h-full w-3/5 rounded-full bg-sky-600"></div>
+            <div className="h-full w-3/5 rounded-full bg-sky-600" />
           </div>
         </div>
 
@@ -261,9 +269,7 @@ function retakePhoto() {
                 className="aspect-[4/3] w-full object-cover"
               />
 
-              {flash && (
-                <div className="absolute inset-0 z-20 bg-white"></div>
-              )}
+              {flash && <div className="absolute inset-0 z-20 bg-white" />}
 
               {countdown !== null && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40">
