@@ -122,23 +122,44 @@ const canContinue =
 <button
   type="button"
   disabled={!canContinue}
-onClick={() => {
-  sessionStorage.setItem("skinchecker_givenNames", givenNames);
-  sessionStorage.setItem("skinchecker_surname", surname);
-  sessionStorage.setItem("skinchecker_dob", dob);
-  sessionStorage.setItem("skinchecker_mobile", mobile);
-  sessionStorage.setItem("skinchecker_email", email);
+  onClick={async () => {
+    sessionStorage.setItem("skinchecker_givenNames", givenNames);
+    sessionStorage.setItem("skinchecker_surname", surname);
+    sessionStorage.setItem("skinchecker_dob", dob);
+    sessionStorage.setItem("skinchecker_mobile", mobile);
+    sessionStorage.setItem("skinchecker_email", email);
 
-  window.location.href = "/scan";
-}}
-            className={`block w-full rounded-2xl py-5 text-center text-lg font-semibold transition ${
-              canContinue
-                ? "bg-sky-600 text-white shadow-lg hover:bg-sky-700"
-                : "cursor-not-allowed bg-slate-200 text-slate-400"
-            }`}
-          >
-            Continue
-          </button>
+    const image = sessionStorage.getItem("skinchecker_photo");
+    const result = JSON.parse(
+      sessionStorage.getItem("skinchecker_result") || "{}"
+    );
+
+    await fetch("/api/email-report", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        givenNames,
+        surname,
+        dob,
+        mobile,
+        email,
+        image,
+        result,
+      }),
+    });
+
+    window.location.href = "/result";
+  }}
+  className={`block w-full rounded-2xl py-5 text-center text-lg font-semibold transition ${
+    canContinue
+      ? "bg-sky-600 text-white shadow-lg hover:bg-sky-700"
+      : "cursor-not-allowed bg-slate-200 text-slate-400"
+  }`}
+>
+  Email My Report
+</button>
 const image = sessionStorage.getItem("skinchecker_photo");
 const result = JSON.parse(sessionStorage.getItem("skinchecker_result") || "{}");
 
