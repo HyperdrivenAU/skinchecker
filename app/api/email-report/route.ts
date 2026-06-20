@@ -84,7 +84,7 @@ const pdfFilename = `${surname || "UNKNOWN"}, ${givenNames || "Patient"} - ${saf
       color: navy,
     });
 
-    page.drawText(`Prepared for: ${firstName || "SkinChecker user"}`, {
+    page.drawText(`Prepared for: ${patientName || "SkinChecker user"}`, {
       x: 42,
       y: 712,
       size: 10.5,
