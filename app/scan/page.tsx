@@ -198,10 +198,16 @@ export default function ScanPage() {
     }, 1000);
   }
 
-  function retakePhoto() {
-    setPhoto(null);
-    setPhotoQuality(null);
-  }
+function retakePhoto() {
+  setPhoto(null);
+  setPhotoQuality(null);
+
+  setTimeout(() => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      videoRef.current.play();
+    }
+  }, 50);
+}
 
   return (
     <main className="min-h-screen bg-white">
