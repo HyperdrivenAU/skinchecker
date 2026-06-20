@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
       color: reportColour,
     });
 
-    page.drawRoundedRectangle({
+    page.drawRectangle({
       x: 42,
       y: 545,
       width: 511,
@@ -119,7 +119,6 @@ export async function POST(request: NextRequest) {
       borderColor: border,
       borderWidth: 1,
       color: rgb(1, 1, 1),
-      borderRadius: 18,
     });
 
     page.drawText(result.headline || "SkinChecker Assessment", {
@@ -145,7 +144,7 @@ export async function POST(request: NextRequest) {
     const imageBytes = Buffer.from(image.split(",")[1], "base64");
     const lesionImage = await pdf.embedJpg(imageBytes);
 
-    page.drawRoundedRectangle({
+    page.drawRectangle({
       x: 42,
       y: 335,
       width: 235,
@@ -263,7 +262,7 @@ export async function POST(request: NextRequest) {
       obsY -= 4;
     }
 
-    page.drawRoundedRectangle({
+    page.drawRectangle({
       x: 42,
       y: 95,
       width: 511,
@@ -271,7 +270,6 @@ export async function POST(request: NextRequest) {
       borderColor: border,
       borderWidth: 1,
       color: lightBlue,
-      borderRadius: 18,
     });
 
     page.drawText("Recommendation", {
