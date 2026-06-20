@@ -319,7 +319,19 @@ page.drawImage(lesionImage, {
       font,
       color: rgb(0.3, 0.35, 0.42),
     });
+const qrPath = path.join(process.cwd(), "public", "qr-skinchecker.png");
 
+if (fs.existsSync(qrPath)) {
+  const qrBytes = fs.readFileSync(qrPath);
+  const qr = await pdf.embedPng(qrBytes);
+
+  page.drawImage(qr, {
+    x: 470,
+    y: 32,
+    width: 70,
+    height: 70,
+  });
+}
     const pdfBytes = await pdf.save();
     const pdfBase64 = Buffer.from(pdfBytes).toString("base64");
 
@@ -373,19 +385,7 @@ page.drawImage(lesionImage, {
 
 </div>
 `,
-const qrPath = path.join(process.cwd(), "public", "qr-skinchecker.png");
 
-if (fs.existsSync(qrPath)) {
-  const qrBytes = fs.readFileSync(qrPath);
-  const qr = await pdf.embedPng(qrBytes);
-
-  page.drawImage(qr, {
-    x: 470,
-    y: 32,
-    width: 70,
-    height: 70,
-  });
-}
       attachments: [
         {
           filename: pdfFilename,
@@ -402,4 +402,5 @@ if (fs.existsSync(qrPath)) {
       { status: 500 }
     );
   }
+  
 }
