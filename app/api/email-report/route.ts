@@ -312,7 +312,7 @@ const pdfBytes = await generateSkinCheckerReportPdf({
   assessment: {
     colour: result?.colour ?? result?.assessment ?? result?.risk ?? "unknown",
     label: result?.label ?? result?.headline,
-    confidence: result?.confidence,
+    // confidence: result?.confidence,
     headline: result?.headline,
     recommendation: result?.recommendation,
   },
