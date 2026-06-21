@@ -23,17 +23,11 @@ export type SkinCheckerReportData = {
   };
   clinicalInterpretation?: string;
   abcde?: {
-    A?: string;
-    B?: string;
-    C?: string;
-    D?: string;
-    E?: string;
     asymmetry?: string;
     border?: string;
     colour?: string;
-    color?: string;
     diameter?: string;
-    evolving?: string;
+    evolution?: string;
   };
   observations?: string[];
   recommendedAction?: string;
