@@ -137,15 +137,10 @@ export default function ScanPage() {
 
             <div className="mt-8 space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-6 text-base leading-7 text-slate-700">
               <p>Clean your camera lens before taking the photo.</p>
-              <p>Use bright, even lighting whenever possible.</p>
               <p>Move hair, clothing or jewellery away from the lesion.</p>
               <p>Hold the camera as steady as possible.</p>
               <p>Fill most of the frame with the lesion, but do not crop it.</p>
-              <p>
-                If the camera struggles to focus, move it further away until the image becomes sharp,
-                then slowly move closer while keeping it in focus.
-              </p>
-              <p>Avoid digital zoom - move the camera closer instead.</p>
+              <p>If the camera struggles to focus, move it further away until the image becomes sharp, then slowly move closer while keeping it in focus.</p>
             </div>
 
             <div className="mt-auto pt-8">
@@ -226,7 +221,7 @@ export default function ScanPage() {
             {photo && (
               <div className="mt-5 space-y-3">
                 <Link
-                  href="/results"
+                  href="/result"
                   className="block w-full rounded-2xl bg-sky-600 py-5 text-center text-lg font-semibold text-white shadow-lg hover:bg-sky-700"
                 >
                   Use this photo
