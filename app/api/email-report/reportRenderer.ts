@@ -2,7 +2,7 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFP
 import fs from "fs";
 import path from "path";
 
-export type AssessmentColour = "green" | "yellow" | "red" | "unknown";
+export type AssessmentColour = "green" | "yellow" | "red" | "blue" | "unknown";
 
 export type SkinCheckerReportData = {
   patient?: {
@@ -17,8 +17,8 @@ export type SkinCheckerReportData = {
   assessment?: {
     colour?: string;
     label?: string;
-    confidence?: number | string;
     headline?: string;
+    summary?: string;
     recommendation?: string;
   };
   clinicalInterpretation?: string;
@@ -28,6 +28,12 @@ export type SkinCheckerReportData = {
     C?: string;
     D?: string;
     E?: string;
+    asymmetry?: string;
+    border?: string;
+    colour?: string;
+    color?: string;
+    diameter?: string;
+    evolving?: string;
   };
   observations?: string[];
   recommendedAction?: string;
@@ -43,6 +49,7 @@ type Fonts = {
 
 const PAGE = { width: 595.28, height: 841.89 }; // A4 portrait
 const M = 42;
+
 const NAVY = rgb(0.035, 0.095, 0.16);
 const BLUE = rgb(0.04, 0.42, 0.65);
 const TEAL = rgb(0.02, 0.62, 0.62);
@@ -64,84 +71,162 @@ function readAsset(fileNames: string[]): Uint8Array | null {
   return null;
 }
 
-function normaliseAssessment(input?: string): AssessmentColour {
-  const value = String(input || "").toLowerCase().trim();
-  if (["green", "low", "low risk", "reassuring", "routine"].some((v) => value.includes(v))) return "green";
-  if (["yellow", "amber", "moderate", "monitor", "medium"].some((v) => value.includes(v))) return "yellow";
-  if (["red", "high", "urgent", "suspicious"].some((v) => value.includes(v))) return "red";
-  return "unknown";
+function clean(value: unknown, fallback = "Not provided"): string {
+  if (value === null || value === undefined) return fallback;
+  const s = String(value).trim();
+  return s.length ? s : fallback;
 }
 
-function assessmentPresentation(colour: AssessmentColour, suppliedLabel?: string) {
-  if (colour === "green") {
-    return {
-      label: suppliedLabel || "LOW RISK",
-      action: "Routine monitoring advised",
-      border: rgb(0.13, 0.55, 0.32),
-      fill: rgb(0.91, 0.97, 0.93),
-      text: rgb(0.05, 0.37, 0.2),
-      dot: rgb(0.14, 0.68, 0.38),
-    };
-  }
-  if (colour === "yellow") {
-    return {
-      label: suppliedLabel || "MODERATE RISK",
-      action: "Routine skin check recommended",
-      border: rgb(0.92, 0.58, 0.04),
-      fill: rgb(1, 0.965, 0.86),
-      text: rgb(0.58, 0.34, 0),
-      dot: rgb(0.95, 0.62, 0.02),
-    };
-  }
-  if (colour === "red") {
-    return {
-      label: suppliedLabel || "HIGH RISK",
-      action: "Prompt medical review recommended",
-      border: rgb(0.77, 0.16, 0.25),
-      fill: rgb(1, 0.92, 0.93),
-      text: rgb(0.62, 0.08, 0.15),
-      dot: rgb(0.82, 0.13, 0.22),
-    };
-  }
-  return {
-    label: suppliedLabel || "ASSESSMENT PROVIDED",
-    action: "Review recommended if concerned",
-    border: rgb(0.45, 0.5, 0.56),
-    fill: rgb(0.95, 0.96, 0.97),
-    text: rgb(0.23, 0.27, 0.32),
-    dot: rgb(0.45, 0.5, 0.56),
-  };
+function titleCaseName(givenNames?: string, surname?: string): string {
+  const given = clean(givenNames, "");
+  const sur = clean(surname, "");
+  const joined = `${given} ${sur}`.trim();
+  return joined || "SkinChecker user";
 }
 
 function formatDate(value?: string | Date): string {
   const d = value ? new Date(value) : new Date();
-  if (Number.isNaN(d.getTime())) return String(value || "");
-  return new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "long", year: "numeric" }).format(d);
+  if (Number.isNaN(d.getTime())) return clean(value, "");
+  return new Intl.DateTimeFormat("en-AU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Australia/Sydney",
+  }).format(d);
 }
 
-function formatDob(value?: string): string {
-  if (!value) return "Not provided";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  return new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "long", year: "numeric" }).format(d);
+function formatReportDate(value?: string | Date): string {
+  const d = value ? new Date(value) : new Date();
+  if (Number.isNaN(d.getTime())) return formatDate(value);
+  return new Intl.DateTimeFormat("en-AU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Australia/Sydney",
+  }).format(d);
 }
 
-function formatConfidence(value?: number | string): string | null {
-  if (value === undefined || value === null || value === "") return null;
-  const n = typeof value === "string" ? Number(value.replace("%", "")) : value;
-  if (Number.isNaN(n)) return String(value);
-  const pct = n <= 1 ? n * 100 : n;
-  return `${Math.round(pct)}%`;
+function normaliseAssessmentColour(input?: string): AssessmentColour {
+  const s = clean(input, "unknown").toLowerCase();
+
+  if (s.includes("green") || s.includes("low")) return "green";
+  if (s.includes("yellow") || s.includes("amber") || s.includes("moderate") || s.includes("monitor")) return "yellow";
+  if (s.includes("red") || s.includes("high")) return "red";
+  if (s.includes("blue") || s.includes("urgent")) return "blue";
+
+  return "unknown";
 }
 
-function patientName(data: SkinCheckerReportData): string {
-  const given = data.patient?.givenNames?.trim() || "";
-  const surname = data.patient?.surname?.trim() || "";
-  const name = `${given} ${surname}`.trim();
-  return name || "SkinChecker user";
+function assessmentTitle(colour: AssessmentColour): string {
+  switch (colour) {
+    case "green": return "LOW RISK";
+    case "yellow": return "MODERATE RISK";
+    case "red": return "HIGH RISK";
+    case "blue": return "REVIEW ADVISED";
+    default: return "ASSESSMENT";
+  }
 }
 
-function drawRoundedRect(page: PDFPage, x: number, y: number, width: number, height: number, options: {
+function assessmentColours(colour: AssessmentColour) {
+  switch (colour) {
+    case "green":
+      return { bg: rgb(0.90, 0.98, 0.93), border: rgb(0.34, 0.74, 0.47), text: rgb(0.07, 0.42, 0.18) };
+    case "yellow":
+      return { bg: rgb(1.0, 0.97, 0.86), border: rgb(0.92, 0.66, 0.12), text: rgb(0.55, 0.34, 0.02) };
+    case "red":
+      return { bg: rgb(1.0, 0.92, 0.92), border: rgb(0.86, 0.22, 0.22), text: rgb(0.62, 0.07, 0.07) };
+    case "blue":
+      return { bg: rgb(0.91, 0.96, 1.0), border: rgb(0.21, 0.55, 0.85), text: rgb(0.05, 0.25, 0.52) };
+    default:
+      return { bg: SOFT, border: LINE, text: NAVY };
+  }
+}
+
+function sanitiseForPdf(text: string): string {
+  return text
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/[\u2022]/g, "-")
+    .replace(/[\u2713\u2714]/g, "OK")
+    .replace(/[\u2717\u2718]/g, "X")
+    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "");
+}
+
+function textWidth(font: PDFFont, text: string, size: number): number {
+  return font.widthOfTextAtSize(sanitiseForPdf(text), size);
+}
+
+function drawText(page: PDFPage, text: string, x: number, y: number, opts: {
+  font: PDFFont;
+  size: number;
+  color?: ReturnType<typeof rgb>;
+}) {
+  page.drawText(sanitiseForPdf(text), {
+    x,
+    y,
+    size: opts.size,
+    font: opts.font,
+    color: opts.color ?? TEXT,
+  });
+}
+
+function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
+  const cleanText = sanitiseForPdf(clean(text, ""));
+  const paragraphs = cleanText.split(/\n+/).map(p => p.trim()).filter(Boolean);
+  const lines: string[] = [];
+
+  for (const paragraph of paragraphs) {
+    const words = paragraph.split(/\s+/);
+    let line = "";
+
+    for (const word of words) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (textWidth(font, candidate, size) <= maxWidth) {
+        line = candidate;
+      } else {
+        if (line) lines.push(line);
+        line = word;
+      }
+    }
+
+    if (line) lines.push(line);
+  }
+
+  return lines;
+}
+
+function drawWrappedText(page: PDFPage, text: string, x: number, y: number, maxWidth: number, opts: {
+  font: PDFFont;
+  size: number;
+  lineHeight?: number;
+  color?: ReturnType<typeof rgb>;
+  maxLines?: number;
+}): number {
+  const lineHeight = opts.lineHeight ?? opts.size + 4;
+  const lines = wrapText(text, opts.font, opts.size, maxWidth);
+  const limited = opts.maxLines ? lines.slice(0, opts.maxLines) : lines;
+
+  limited.forEach((line, i) => {
+    drawText(page, line, x, y - i * lineHeight, {
+      font: opts.font,
+      size: opts.size,
+      color: opts.color ?? TEXT,
+    });
+  });
+
+  return y - limited.length * lineHeight;
+}
+
+function drawSectionTitle(page: PDFPage, title: string, x: number, y: number, fonts: Fonts) {
+  drawText(page, title.toUpperCase(), x, y, {
+    font: fonts.bold,
+    size: 9,
+    color: BLUE,
+  });
+}
+
+function drawRoundedBox(page: PDFPage, x: number, y: number, width: number, height: number, opts?: {
   fill?: ReturnType<typeof rgb>;
   border?: ReturnType<typeof rgb>;
   borderWidth?: number;
@@ -151,228 +236,349 @@ function drawRoundedRect(page: PDFPage, x: number, y: number, width: number, hei
     y,
     width,
     height,
-    color: options.fill,
-    borderColor: options.border,
-    borderWidth: options.borderWidth ?? 0,
+    borderColor: opts?.border ?? LINE,
+    borderWidth: opts?.borderWidth ?? 1,
+    color: opts?.fill ?? WHITE,
   });
 }
 
-function drawText(page: PDFPage, text: string, x: number, y: number, size: number, font: PDFFont, color = TEXT) {
-  page.drawText(text, { x, y, size, font, color });
-}
+async function embedImage(pdfDoc: PDFDocument, dataUrlOrBase64?: string): Promise<PDFImage | null> {
+  if (!dataUrlOrBase64) return null;
 
-function fitText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
-  const words = String(text || "").replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
-  const lines: string[] = [];
-  let line = "";
-  for (const word of words) {
-    const test = line ? `${line} ${word}` : word;
-    if (font.widthOfTextAtSize(test, size) <= maxWidth) {
-      line = test;
-    } else {
-      if (line) lines.push(line);
-      line = word;
-    }
-  }
-  if (line) lines.push(line);
-  return lines;
-}
-
-function drawParagraph(page: PDFPage, text: string, x: number, y: number, maxWidth: number, size: number, font: PDFFont, lineHeight = size + 4, maxLines?: number): number {
-  let lines = fitText(text, font, size, maxWidth);
-  if (maxLines && lines.length > maxLines) {
-    lines = lines.slice(0, maxLines);
-    const last = lines[lines.length - 1];
-    lines[lines.length - 1] = last.length > 4 ? `${last.replace(/[,. ]+$/, "")}...` : last;
-  }
-  let cursor = y;
-  for (const line of lines) {
-    drawText(page, line, x, cursor, size, font);
-    cursor -= lineHeight;
-  }
-  return cursor;
-}
-
-async function embedOptionalPng(pdfDoc: PDFDocument, bytes: Uint8Array | null): Promise<PDFImage | null> {
-  if (!bytes) return null;
-  try { return await pdfDoc.embedPng(bytes); } catch { return null; }
-}
-
-async function embedSubmittedImage(pdfDoc: PDFDocument, image?: string): Promise<PDFImage | null> {
-  if (!image) return null;
-  const match = image.match(/^data:(image\/(png|jpeg|jpg|webp));base64,(.+)$/i);
-  const base64 = match ? match[3] : image;
-  const mime = match ? match[1].toLowerCase() : "";
+  const value = dataUrlOrBase64.trim();
+  const match = value.match(/^data:(image\/(png|jpeg|jpg));base64,(.+)$/i);
+  const mime = match?.[1]?.toLowerCase();
+  const base64 = match ? match[3] : value;
   const bytes = Uint8Array.from(Buffer.from(base64, "base64"));
 
-  if (mime.includes("png")) return pdfDoc.embedPng(bytes);
-  if (mime.includes("jpg") || mime.includes("jpeg")) return pdfDoc.embedJpg(bytes);
+  try {
+    if (mime?.includes("png")) return await pdfDoc.embedPng(bytes);
+    if (mime?.includes("jpg") || mime?.includes("jpeg")) return await pdfDoc.embedJpg(bytes);
 
-  try { return await pdfDoc.embedJpg(bytes); } catch {}
-  try { return await pdfDoc.embedPng(bytes); } catch {}
-  return null;
+    try {
+      return await pdfDoc.embedJpg(bytes);
+    } catch {
+      return await pdfDoc.embedPng(bytes);
+    }
+  } catch {
+    return null;
+  }
 }
 
-function drawImageContained(page: PDFPage, image: PDFImage, boxX: number, boxY: number, boxW: number, boxH: number) {
-  const iw = image.width;
-  const ih = image.height;
-  const scale = Math.min(boxW / iw, boxH / ih);
-  const w = iw * scale;
-  const h = ih * scale;
-  page.drawImage(image, {
-    x: boxX + (boxW - w) / 2,
-    y: boxY + (boxH - h) / 2,
-    width: w,
-    height: h,
+async function embedPublicImage(pdfDoc: PDFDocument, fileNames: string[]): Promise<PDFImage | null> {
+  const bytes = readAsset(fileNames);
+  if (!bytes) return null;
+
+  for (const fileName of fileNames) {
+    const lower = fileName.toLowerCase();
+    try {
+      if (lower.endsWith(".png")) return await pdfDoc.embedPng(bytes);
+      if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return await pdfDoc.embedJpg(bytes);
+    } catch {
+      // keep trying fallback below
+    }
+  }
+
+  try {
+    return await pdfDoc.embedPng(bytes);
+  } catch {
+    try {
+      return await pdfDoc.embedJpg(bytes);
+    } catch {
+      return null;
+    }
+  }
+}
+
+function drawContainImage(page: PDFPage, image: PDFImage, x: number, y: number, boxW: number, boxH: number) {
+  const imgW = image.width;
+  const imgH = image.height;
+  const scale = Math.min(boxW / imgW, boxH / imgH);
+  const drawW = imgW * scale;
+  const drawH = imgH * scale;
+  const drawX = x + (boxW - drawW) / 2;
+  const drawY = y + (boxH - drawH) / 2;
+
+  page.drawImage(image, { x: drawX, y: drawY, width: drawW, height: drawH });
+}
+
+function getFieldValue(obj: unknown, keys: string[]): string | undefined {
+  if (!obj || typeof obj !== "object") return undefined;
+  const record = obj as Record<string, unknown>;
+
+  for (const key of keys) {
+    const direct = record[key];
+    if (direct !== undefined && direct !== null && String(direct).trim()) return String(direct);
+
+    const foundKey = Object.keys(record).find(k => k.toLowerCase() === key.toLowerCase());
+    if (foundKey) {
+      const val = record[foundKey];
+      if (val !== undefined && val !== null && String(val).trim()) return String(val);
+    }
+  }
+
+  return undefined;
+}
+
+function buildAbcde(data: SkinCheckerReportData): Array<[string, string]> {
+  const a = data.abcde ?? {};
+  const observations = data.observations ?? [];
+  const combinedObs = observations.join(" | ").toLowerCase();
+
+  const asymmetry = getFieldValue(a, ["A", "asymmetry"])
+    ?? (combinedObs.includes("asym") ? "Asymmetry noted" : "Not assessed");
+  const border = getFieldValue(a, ["B", "border"])
+    ?? (combinedObs.includes("border") ? "Border irregularity noted" : "Not assessed");
+  const colour = getFieldValue(a, ["C", "colour", "color"])
+    ?? (combinedObs.includes("colour") || combinedObs.includes("color") ? "Colour variation noted" : "Not assessed");
+  const diameter = getFieldValue(a, ["D", "diameter"])
+    ?? (combinedObs.includes("diameter") || combinedObs.includes("mm") ? "Estimated under 5 mm" : "Not assessed");
+  const evolving = getFieldValue(a, ["E", "evolving", "evolution"])
+    ?? "Cannot assess from one image";
+
+  return [
+    ["Asymmetry", asymmetry],
+    ["Border", border],
+    ["Colour", colour],
+    ["Diameter", diameter],
+    ["Evolving", evolving],
+  ];
+}
+
+function drawHeader(page: PDFPage, logo: PDFImage | null, reportDate: string, fonts: Fonts) {
+  const top = PAGE.height - M;
+
+  if (logo) {
+    const maxW = 165;
+    const maxH = 38;
+    const scale = Math.min(maxW / logo.width, maxH / logo.height);
+    page.drawImage(logo, {
+      x: M,
+      y: top - logo.height * scale + 2,
+      width: logo.width * scale,
+      height: logo.height * scale,
+    });
+  } else {
+    drawText(page, "SkinChecker.app", M, top - 20, { font: fonts.bold, size: 18, color: TEAL });
+  }
+
+  const dateW = textWidth(fonts.regular, reportDate, 9);
+  drawText(page, reportDate, PAGE.width - M - dateW, top - 14, { font: fonts.regular, size: 9, color: MUTED });
+
+  drawText(page, "Skin Lesion Assessment Report", M, top - 54, { font: fonts.bold, size: 17, color: NAVY });
+  drawText(page, "Generated using SkinChecker.app Artificial Intelligence", M, top - 70, { font: fonts.regular, size: 8.5, color: MUTED });
+
+  page.drawLine({ start: { x: M, y: top - 86 }, end: { x: PAGE.width - M, y: top - 86 }, thickness: 1, color: LINE });
+}
+
+function drawPatientBox(page: PDFPage, data: SkinCheckerReportData, x: number, y: number, w: number, h: number, fonts: Fonts) {
+  drawRoundedBox(page, x, y, w, h, { fill: SOFT, border: LINE });
+  drawSectionTitle(page, "Patient Details", x + 14, y + h - 18, fonts);
+
+  const patient = data.patient ?? {};
+  const rows: Array<[string, string]> = [
+    ["Name", titleCaseName(patient.givenNames, patient.surname)],
+    ["DOB", formatDate(patient.dob)],
+    ["Postcode", clean(patient.postcode)],
+    ["Mobile", clean(patient.mobile)],
+  ];
+
+  let yy = y + h - 40;
+  for (const [label, value] of rows) {
+    drawText(page, label.toUpperCase(), x + 14, yy, { font: fonts.bold, size: 6.8, color: MUTED });
+    drawWrappedText(page, value, x + 70, yy, w - 84, { font: fonts.regular, size: 8.8, lineHeight: 10.5, maxLines: 1 });
+    yy -= 15;
+  }
+}
+
+function drawAssessmentBox(page: PDFPage, data: SkinCheckerReportData, x: number, y: number, w: number, h: number, fonts: Fonts) {
+  const colour = normaliseAssessmentColour(data.assessment?.colour ?? data.assessment?.label ?? data.assessment?.headline);
+  const c = assessmentColours(colour);
+
+  drawRoundedBox(page, x, y, w, h, { fill: c.bg, border: c.border, borderWidth: 1.2 });
+  drawSectionTitle(page, "Assessment", x + 14, y + h - 18, fonts);
+
+  drawText(page, assessmentTitle(colour), x + 14, y + h - 43, {
+    font: fonts.bold,
+    size: 17,
+    color: c.text,
+  });
+
+  const summary = clean(
+    data.assessment?.summary
+      ?? data.assessment?.recommendation
+      ?? data.recommendedAction
+      ?? data.assessment?.headline,
+    "Review the recommendation below."
+  );
+
+  drawWrappedText(page, summary, x + 14, y + h - 62, w - 28, {
+    font: fonts.regular,
+    size: 9.2,
+    lineHeight: 12,
+    color: TEXT,
+    maxLines: 3,
   });
 }
 
-function drawKeyValue(page: PDFPage, label: string, value: string, x: number, y: number, fonts: Fonts, valueWidth = 125) {
-  drawText(page, label.toUpperCase(), x, y, 6.5, fonts.bold, MUTED);
-  drawParagraph(page, value || "Not provided", x, y - 12, valueWidth, 9.5, fonts.bold, 12, 2);
+function drawAbcde(page: PDFPage, data: SkinCheckerReportData, x: number, y: number, w: number, fonts: Fonts): number {
+  drawSectionTitle(page, "ABCDE", x, y, fonts);
+  let yy = y - 16;
+  const rows = buildAbcde(data);
+
+  for (const [label, value] of rows) {
+    drawText(page, label, x, yy, { font: fonts.bold, size: 8.4, color: TEXT });
+    drawWrappedText(page, value, x + 62, yy, w - 62, {
+      font: fonts.regular,
+      size: 8.4,
+      lineHeight: 9.8,
+      color: TEXT,
+      maxLines: 1,
+    });
+    yy -= 12.5;
+  }
+
+  return yy;
+}
+
+function drawObservations(page: PDFPage, observations: string[], x: number, y: number, w: number, fonts: Fonts): number {
+  drawSectionTitle(page, "Observations", x, y, fonts);
+  let yy = y - 16;
+  const items = observations.length ? observations.slice(0, 5) : ["No specific observations were provided."];
+
+  for (const item of items) {
+    drawText(page, "-", x, yy, { font: fonts.regular, size: 8.8, color: MUTED });
+    yy = drawWrappedText(page, item, x + 10, yy, w - 10, {
+      font: fonts.regular,
+      size: 8.8,
+      lineHeight: 10.8,
+      maxLines: 2,
+    });
+    yy -= 2;
+  }
+
+  return yy;
+}
+
+function drawRecommendation(page: PDFPage, text: string, x: number, y: number, w: number, fonts: Fonts): number {
+  drawSectionTitle(page, "Recommended Clinical Action", x, y, fonts);
+  return drawWrappedText(page, text, x, y - 16, w, {
+    font: fonts.regular,
+    size: 9.2,
+    lineHeight: 12,
+    maxLines: 3,
+  });
+}
+
+function deriveRecommendedAction(data: SkinCheckerReportData): string {
+  return clean(
+    data.recommendedAction
+      ?? data.assessment?.recommendation,
+    "Repeat the photograph in 4-8 weeks or arrange a routine skin check if you have any concerns or notice changes."
+  );
+}
+
+function deriveClinicalInterpretation(data: SkinCheckerReportData): string {
+  return clean(
+    data.clinicalInterpretation
+      ?? data.assessment?.summary
+      ?? data.assessment?.headline,
+    "The submitted image has been assessed by SkinChecker.app artificial intelligence. Review the ABCDE findings, observations and recommended clinical action below."
+  );
+}
+
+async function drawFooter(page: PDFPage, pdfDoc: PDFDocument, fonts: Fonts) {
+  const qr = await embedPublicImage(pdfDoc, ["qr-skinchecker.png", "qr.png"]);
+  const footerY = 78;
+
+  if (qr) {
+    const size = 54;
+    const x = PAGE.width / 2 - size / 2;
+    page.drawImage(qr, { x, y: footerY + 26, width: size, height: size });
+  }
+
+  const title = "FREE AI SKIN CHECK";
+  const titleW = textWidth(fonts.bold, title, 9);
+  drawText(page, title, PAGE.width / 2 - titleW / 2, footerY + 16, { font: fonts.bold, size: 9, color: TEAL });
+
+  const caption = "Scan to perform your own free SkinChecker.app assessment.";
+  const captionW = textWidth(fonts.regular, caption, 8.2);
+  drawText(page, caption, PAGE.width / 2 - captionW / 2, footerY + 3, { font: fonts.regular, size: 8.2, color: MUTED });
+
+  const site = "www.skinchecker.app";
+  const siteW = textWidth(fonts.bold, site, 8.4);
+  drawText(page, site, PAGE.width / 2 - siteW / 2, footerY - 10, { font: fonts.bold, size: 8.4, color: BLUE });
+
+  const disclaimer = "This AI-assisted report is informational only and is not a diagnosis. Seek medical advice for any lesion that is new, changing, bleeding, painful or concerning.";
+  const disclaimerW = PAGE.width - M * 2;
+  drawWrappedText(page, disclaimer, M, 34, disclaimerW, { font: fonts.regular, size: 7.3, lineHeight: 9, color: MUTED, maxLines: 2 });
+
+  drawText(page, "Generated by SkinChecker.app", M, 17, { font: fonts.regular, size: 7, color: MUTED });
 }
 
 export async function generateSkinCheckerReportPdf(data: SkinCheckerReportData): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([PAGE.width, PAGE.height]);
+
   const fonts: Fonts = {
     regular: await pdfDoc.embedFont(StandardFonts.Helvetica),
     bold: await pdfDoc.embedFont(StandardFonts.HelveticaBold),
     italic: await pdfDoc.embedFont(StandardFonts.HelveticaOblique),
   };
 
-  const logo = await embedOptionalPng(pdfDoc, readAsset(["SkinCheckerApp Logo TB2.png", "SkinCheckerApp Logo.png", "skinchecker-logo.png"]));
-  const qr = await embedOptionalPng(pdfDoc, readAsset(["qr-skinchecker.png"]));
-  const submittedImage = await embedSubmittedImage(pdfDoc, data.image);
+  const logo = await embedPublicImage(pdfDoc, [
+    "SkinCheckerApp Logo TB2.png",
+    "SkinCheckerApp Logo.png",
+    "logo.png",
+    "logo-email.png",
+  ]);
 
-  // Header
-  page.drawRectangle({ x: 0, y: 748, width: PAGE.width, height: 94, color: NAVY });
-  if (logo) {
-    drawImageContained(page, logo, M, 772, 172, 46);
+  drawHeader(page, logo, formatReportDate(data.reportDate), fonts);
+
+  const topY = PAGE.height - M - 112;
+  const boxH = 108;
+  const gap = 18;
+  const colW = (PAGE.width - M * 2 - gap) / 2;
+
+  drawPatientBox(page, data, M, topY - boxH, colW, boxH, fonts);
+  drawAssessmentBox(page, data, M + colW + gap, topY - boxH, colW, boxH, fonts);
+
+  const contentTop = topY - boxH - 34;
+  const photoW = 205;
+  const photoH = 170;
+  const rightX = M + photoW + 28;
+  const rightW = PAGE.width - M - rightX;
+
+  drawSectionTitle(page, "Submitted Photograph", M, contentTop, fonts);
+  const image = await embedImage(pdfDoc, data.image);
+  const photoY = contentTop - 190;
+
+  if (image) {
+    drawContainImage(page, image, M, photoY, photoW, photoH);
   } else {
-    drawText(page, "SkinChecker.app", M, 793, 22, fonts.bold, WHITE);
-  }
-  drawText(page, formatDate(data.reportDate), PAGE.width - M - 92, 793, 9, fonts.regular, rgb(0.78, 0.86, 0.93));
-  drawText(page, "Skin Lesion Assessment Report", M, 727, 21, fonts.bold, NAVY);
-  drawText(page, "Generated using SkinChecker.app Artificial Intelligence", M, 709, 9.5, fonts.regular, MUTED);
-
-  // Top cards
-  const colour = normaliseAssessment(data.assessment?.colour || data.assessment?.label || data.assessment?.headline);
-  const assess = assessmentPresentation(colour, data.assessment?.label);
-  const confidence = formatConfidence(data.assessment?.confidence);
-
-  drawRoundedRect(page, M, 635, 244, 57, { fill: SOFT, border: LINE, borderWidth: 0.8 });
-  drawText(page, "PATIENT DETAILS", M + 14, 674, 8, fonts.bold, MUTED);
-  drawKeyValue(page, "Name", patientName(data), M + 14, 657, fonts, 110);
-  drawKeyValue(page, "DOB", formatDob(data.patient?.dob), M + 14, 629, fonts, 95);
-  drawKeyValue(page, "Postcode", data.patient?.postcode || "Not provided", M + 134, 629, fonts, 80);
-
-  drawRoundedRect(page, 314, 635, 239, 57, { fill: assess.fill, border: assess.border, borderWidth: 1.2 });
-  page.drawCircle({ x: 333, y: 665, size: 7, color: assess.dot });
-  drawText(page, "ASSESSMENT", 349, 674, 8, fonts.bold, MUTED);
-  drawText(page, assess.label, 349, 654, 17, fonts.bold, assess.text);
-  drawText(page, data.assessment?.headline || assess.action, 349, 640, 8.5, fonts.regular, TEXT);
-  if (confidence) drawText(page, `AI confidence: ${confidence}`, 465, 640, 8, fonts.bold, assess.text);
-
-  // Clinical Interpretation
-  drawText(page, "CLINICAL INTERPRETATION", M, 603, 10.5, fonts.bold, NAVY);
-  let y = drawParagraph(
-    page,
-    data.clinicalInterpretation || "No clinical interpretation was provided.",
-    M,
-    585,
-    PAGE.width - M * 2,
-    9.5,
-    fonts.regular,
-    13,
-    5,
-  );
-  page.drawLine({ start: { x: M, y: y - 6 }, end: { x: PAGE.width - M, y: y - 6 }, thickness: 0.7, color: LINE });
-
-  // Main body: photograph left, ABCDE/observations right
-  const bodyTop = y - 28;
-  const photoX = M;
-  const photoY = 304;
-  const photoW = 250;
-  const photoH = 235;
-  drawText(page, "SUBMITTED PHOTOGRAPH", photoX, bodyTop, 10.5, fonts.bold, NAVY);
-  drawRoundedRect(page, photoX, photoY, photoW, photoH, { fill: WHITE, border: LINE, borderWidth: 0.8 });
-  if (submittedImage) {
-    drawImageContained(page, submittedImage, photoX + 7, photoY + 7, photoW - 14, photoH - 14);
-  } else {
-    drawText(page, "No image supplied", photoX + 77, photoY + 116, 10, fonts.italic, MUTED);
+    page.drawRectangle({ x: M, y: photoY, width: photoW, height: photoH, color: rgb(0.96, 0.96, 0.96) });
+    drawText(page, "No submitted image available", M + 32, photoY + 80, { font: fonts.regular, size: 9, color: MUTED });
   }
 
-  const panelX = 315;
-  const panelY = 304;
-  const panelW = 238;
-  const panelH = 235;
-  drawRoundedRect(page, panelX, panelY, panelW, panelH, { fill: rgb(0.985, 0.99, 0.995), border: LINE, borderWidth: 0.8 });
-  drawText(page, "ABCDE", panelX + 14, panelY + panelH - 25, 12, fonts.bold, NAVY);
-  const abcde = data.abcde || {};
-  const abcdeRows: Array<[string, string]> = [
-    ["A", abcde.A || "Not assessed"],
-    ["B", abcde.B || "Not assessed"],
-    ["C", abcde.C || "Not assessed"],
-    ["D", abcde.D || "Not assessed"],
-    ["E", abcde.E || "Not assessed"],
-  ];
-  let rowY = panelY + panelH - 47;
-  for (const [letter, value] of abcdeRows) {
-    drawText(page, letter, panelX + 16, rowY, 9.5, fonts.bold, TEAL);
-    drawParagraph(page, value, panelX + 36, rowY, panelW - 54, 8.6, fonts.regular, 10.5, 2);
-    rowY -= 23;
-  }
+  drawSectionTitle(page, "Clinical Interpretation", rightX, contentTop, fonts);
+  drawWrappedText(page, deriveClinicalInterpretation(data), rightX, contentTop - 18, rightW, {
+    font: fonts.regular,
+    size: 8.8,
+    lineHeight: 11,
+    maxLines: 13,
+  });
 
-  drawText(page, "OBSERVATIONS", panelX + 14, rowY - 1, 10.5, fonts.bold, NAVY);
-  rowY -= 19;
-  const observations = (data.observations || []).slice(0, 5);
-  if (observations.length === 0) observations.push("No structured observations were provided.");
-  for (const obs of observations) {
-    page.drawCircle({ x: panelX + 19, y: rowY + 3, size: 2.2, color: TEAL });
-    const after = drawParagraph(page, obs, panelX + 29, rowY, panelW - 45, 8.2, fonts.regular, 9.5, 2);
-    rowY = after - 4;
-    if (rowY < panelY + 12) break;
-  }
+  const abcdeBottom = drawAbcde(page, data, M, photoY - 20, photoW, fonts);
 
-  // Recommended action
-  drawRoundedRect(page, M, 237, PAGE.width - M * 2, 44, { fill: rgb(0.91, 0.965, 0.985), border: rgb(0.75, 0.86, 0.91), borderWidth: 0.8 });
-  drawText(page, "RECOMMENDED CLINICAL ACTION", M + 14, 263, 10.5, fonts.bold, NAVY);
-  drawParagraph(
-    page,
-    data.recommendedAction || data.assessment?.recommendation || assess.action,
-    M + 14,
-    248,
-    PAGE.width - M * 2 - 28,
-    9,
-    fonts.regular,
-    11,
-    2,
-  );
+  const lowerStartY = Math.min(abcdeBottom - 18, photoY - 105);
+  const fullW = PAGE.width - M * 2;
 
-  // Marketing QR card
-  drawRoundedRect(page, M, 88, PAGE.width - M * 2, 118, { fill: WHITE, border: LINE, borderWidth: 0.8 });
-  drawText(page, "FREE AI SKIN CHECK", M + 18, 176, 12, fonts.bold, NAVY);
-  drawText(page, "Scan to perform your own free SkinChecker.app assessment.", M + 18, 157, 9.2, fonts.regular, TEXT);
-  drawText(page, "www.skinchecker.app", M + 18, 138, 10, fonts.bold, BLUE);
-  if (qr) {
-    drawImageContained(page, qr, PAGE.width - M - 96, 103, 78, 78);
-  }
+  const obsBottom = drawObservations(page, data.observations ?? [], M, lowerStartY, fullW, fonts);
+  drawRecommendation(page, deriveRecommendedAction(data), M, obsBottom - 10, fullW, fonts);
 
-  // Footer disclaimer
-  page.drawLine({ start: { x: M, y: 64 }, end: { x: PAGE.width - M, y: 64 }, thickness: 0.7, color: LINE });
-  drawParagraph(
-    page,
-    "This AI-assisted report is informational only and is not a diagnosis. Seek medical advice for any lesion that is new, changing, bleeding, painful or concerning.",
-    M,
-    48,
-    PAGE.width - M * 2,
-    7.2,
-    fonts.regular,
-    9,
-    2,
-  );
-  drawText(page, "Generated by SkinChecker.app", M, 22, 7.5, fonts.bold, MUTED);
+  await drawFooter(page, pdfDoc, fonts);
 
-  return pdfDoc.save();
+  return await pdfDoc.save();
 }
+
+export default generateSkinCheckerReportPdf;

@@ -38,7 +38,7 @@ export default function ConsentPage() {
           Before we begin...
         </h1>
 
-        <p className="mt-4 text-lg leading-8 text-slate-600">
+        <p className="mt-4 text-lg leading-6 text-slate-600">
           SkinChecker uses artificial intelligence (AI) to analyse photographs
           of skin lesions. Before continuing, please confirm that you understand
           and agree to the following.
