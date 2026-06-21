@@ -45,7 +45,7 @@ export default function ResultPage() {
       bg: "bg-green-500",
       panel: "bg-green-50 border-green-200",
       text: "text-green-700",
-      icon: <CheckCircle2 className="h-10 w-10 text-white" />,
+      icon: <CheckCircle2 className="h-10 w-10 shrink-0 text-white" />,
     },
     yellow: {
       bg: "bg-amber-400",
@@ -125,7 +125,7 @@ export default function ResultPage() {
                 key={index}
                 className="flex items-start gap-3 text-slate-700"
               >
-                <CheckCircle2 className="mt-1 h-5 w-5 text-green-600" />
+                <CheckCircle2 className="mt-1 h-5 w-5 flex-none text-green-600" />
                 <span>{item}</span>
               </li>
             ))}
@@ -172,13 +172,7 @@ export default function ResultPage() {
           </p>
 
         </div>
-// 
-// <div className="mt-8 rounded-2xl border border-green-200 bg-green-50 p-5">
-//   <p className="font-semibold text-green-800">
-//     ✓ A copy of this report has been emailed to you.
-//  </p>
-// </div>
-// 
+
         <div className="mt-10 space-y-4">
 
           <Link
