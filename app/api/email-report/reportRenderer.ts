@@ -606,12 +606,22 @@ export async function generateSkinCheckerReportPdf(data: SkinCheckerReportData):
     maxLines: 13,
   });
 
-  const abcdeBottom = drawAbcde(page, data, M, photoY - 20, photoW, fonts);
+  const abcdeBottom = drawAbcde(page, data, M,, photoY - 20, photoW, fonts);
 
   const lowerStartY = Math.min(abcdeBottom - 18, photoY - 105);
   const fullW = PAGE.width - M * 2;
 
-  const obsBottom = drawObservations(page, data.observations ?? [], M, lowerStartY, fullW, fonts);
+  const obsX = 290;
+const obsW = PAGE.width - obsX - M;
+
+const obsBottom = drawObservations(
+    page,
+    data.observations ?? [],
+    obsX,
+    lowerStartY,
+    obsW,
+    fonts
+);
   drawRecommendation(page, deriveRecommendedAction(data), M, obsBottom - 10, fullW, fonts);
 
   await drawFooter(page, pdfDoc, fonts);

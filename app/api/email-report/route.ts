@@ -310,24 +310,27 @@ const pdfBytes = await generateSkinCheckerReportPdf({
   },
   reportDate: new Date(),
   assessment: {
-    colour: result?.colour ?? result?.assessment ?? result?.risk ?? "unknown",
-    label: result?.label ?? result?.headline,
-    // confidence: result?.confidence,
+    colour: result?.trafficLight ?? "unknown",
+    label: result?.headline,
     headline: result?.headline,
+    summary: result?.summary,
     recommendation: result?.recommendation,
   },
-  clinicalInterpretation:
-    result?.clinicalInterpretation ??
-    result?.summary ??
-    result?.description ??
-    "",
-  abcde: result?.abcde ?? result?.ABCDE,
+  clinicalInterpretation: result?.summary ?? "",
+  abcde: {
+    asymmetry: result?.abcde?.asymmetry,
+    border: result?.abcde?.border,
+    colour: result?.abcde?.colour,
+    diameter: result?.abcde?.diameter,
+    evolution: result?.abcde?.evolution,
+  },
   observations: result?.observations ?? [],
   recommendedAction: result?.recommendation ?? "",
   image: payload.image,
-  imageQuality: result?.imageQuality ?? result?.image_quality ?? "Not specified",
+  imageQuality: result?.imageQuality ?? "Not specified",
 });
-    const filename = `SkinChecker Report - ${clean(payload.surname, "Patient")}.pdf`;
+
+    const filename = `${clean(payload.surname, "PATIENT")}, ${clean(payload.givenNames, "Unknown")} - ${clean(payload.dob, "Unknown DOB")} - SkinChecker Report.pdf`;
 
     const from = process.env.RESEND_FROM_EMAIL || "SkinChecker.app <reports@skinchecker.app>";
 
