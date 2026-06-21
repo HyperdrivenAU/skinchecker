@@ -499,7 +499,7 @@ function deriveClinicalInterpretation(data: SkinCheckerReportData): string {
   );
 }
 
-aasync function drawFooter(page: PDFPage, pdfDoc: PDFDocument, fonts: Fonts) {
+async function drawFooter(page: PDFPage, pdfDoc: PDFDocument, fonts: Fonts) {
   const qr = await embedPublicImage(pdfDoc, ["qr-skinchecker.png", "qr.png"]);
   const footerY = 78;
 
