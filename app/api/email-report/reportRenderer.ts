@@ -170,7 +170,7 @@ function fitImage(img: PDFImage, boxW: number, boxH: number) {
   return { w: iw * scale, h: ih * scale };
 }
 
-function drawIconCircle(page: PDFPage, x: number, y: number, r: number, colour: any, fonts: Fonts, symbol = "✓") {
+function drawIconCircle(page: PDFPage, x: number, y: number, r: number, colour: any, fonts: Fonts, symbol = "OK") {
   page.drawEllipse({ x, y, xScale: r, yScale: r, color: colour });
   drawText(page, symbol, x - 6.5, y - 7, 22, fonts.bold, WHITE);
 }
@@ -230,7 +230,7 @@ export async function generateSkinCheckerReportPdf(data: SkinCheckerReportData):
 
   drawText(page, "ASSESSMENT", M + leftW + 18, topY + 68, 11, fonts.bold, NAVY);
   card(page, M + leftW + 18, topY + 18, PAGE.width - M * 2 - leftW - 36, 42, { fill: aCopy.bg, border: aCopy.c, width: 1 });
-  drawIconCircle(page, M + leftW + 48, topY + 39, 16, aCopy.c, fonts, colour === "red" ? "!" : colour === "yellow" ? "!" : "✓");
+  drawIconCircle(page, M + leftW + 48, topY + 39, 16, aCopy.c, fonts, colour === "red" ? "!" : colour === "yellow" ? "!" : "OK");
   drawText(page, aCopy.label, M + leftW + 74, topY + 42, 22, fonts.bold, aCopy.c);
   drawText(page, aCopy.line, M + leftW + 75, topY + 26, 10.5, fonts.regular, TEXT);
 
