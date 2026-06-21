@@ -1,164 +1,71 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { Camera, CheckCircle2, RotateCcw, TriangleAlert } from "lucide-react";
-import { useRouter } from "next/navigation";
-
-type PhotoQuality = "good" | "blurry" | null;
-
-type WebkitWindow = typeof window & {
-  webkitAudioContext?: typeof AudioContext;
-};
+import { useEffect, useRef, useState } from "react";
 
 export default function ScanPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
 
+  const [screen, setScreen] = useState<"instructions" | "camera">("instructions");
   const [photo, setPhoto] = useState<string | null>(null);
-  const [photoQuality, setPhotoQuality] = useState<PhotoQuality>(null);
-  const [delay, setDelay] = useState(5);
-  const [countdown, setCountdown] = useState<number | null>(null);
   const [cameraError, setCameraError] = useState("");
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
   const [flash, setFlash] = useState(false);
-  const router = useRouter();
 
-  useEffect(() => {
-    async function startCamera() {
-      try {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-          audio: false,
-        });
+  async function startCamera() {
+    if (screen !== "camera") return;
 
-        streamRef.current = mediaStream;
+    try {
+      setCameraError("");
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-          await videoRef.current.play();
-        }
-      } catch {
-        setCameraError(
-          "We could not access your camera. Please allow camera access or choose a photo from your device."
-        );
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 1280 },
+        },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
       }
+
+      const track = stream.getVideoTracks()[0];
+      const capabilities = track.getCapabilities?.() as MediaTrackCapabilities & {
+        torch?: boolean;
+      };
+
+      setTorchSupported(!!capabilities?.torch);
+    } catch {
+      setCameraError("Unable to access the camera. Please check camera permissions.");
     }
-
-    startCamera();
-
-    return () => {
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      audioContextRef.current?.close();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!photo && videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-      videoRef.current.play().catch(() => {});
-    }
-  }, [photo]);
-
-  function beep(frequency = 880, duration = 120) {
-    const AudioContextClass =
-      window.AudioContext ||
-      (window as WebkitWindow).webkitAudioContext;
-
-    if (!AudioContextClass) return;
-
-    if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContextClass();
-    }
-
-    const audioContext = audioContextRef.current;
-    const oscillator = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-
-    oscillator.type = "sine";
-    oscillator.frequency.value = frequency;
-
-    gain.gain.setValueAtTime(0.08, audioContext.currentTime);
-    gain.gain.exponentialRampToValueAtTime(
-      0.001,
-      audioContext.currentTime + duration / 1000
-    );
-
-    oscillator.connect(gain);
-    gain.connect(audioContext.destination);
-
-    oscillator.start();
-    oscillator.stop(audioContext.currentTime + duration / 1000);
   }
 
-  function shutterSound() {
-    beep(1200, 80);
-    setTimeout(() => beep(700, 100), 90);
+  function stopCamera() {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setTorchOn(false);
   }
 
-  function estimateSharpness(canvas: HTMLCanvasElement) {
-    const sampleCanvas = document.createElement("canvas");
-    const sampleContext = sampleCanvas.getContext("2d");
+  async function toggleTorch() {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
 
-    if (!sampleContext) return 999;
-
-    const maxWidth = 220;
-    const scale = Math.min(1, maxWidth / canvas.width);
-
-    sampleCanvas.width = Math.max(1, Math.floor(canvas.width * scale));
-    sampleCanvas.height = Math.max(1, Math.floor(canvas.height * scale));
-
-    sampleContext.drawImage(
-      canvas,
-      0,
-      0,
-      sampleCanvas.width,
-      sampleCanvas.height
-    );
-
-    const image = sampleContext.getImageData(
-      0,
-      0,
-      sampleCanvas.width,
-      sampleCanvas.height
-    );
-
-    const { data, width, height } = image;
-
-    function greyAt(x: number, y: number) {
-      const index = (y * width + x) * 4;
-      return (
-        data[index] * 0.299 +
-        data[index + 1] * 0.587 +
-        data[index + 2] * 0.114
-      );
+    try {
+      await track.applyConstraints({
+        advanced: [{ torch: !torchOn } as MediaTrackConstraintSet],
+      });
+      setTorchOn(!torchOn);
+    } catch {
+      setTorchSupported(false);
     }
-
-    let total = 0;
-    let totalSquared = 0;
-    let count = 0;
-
-    for (let y = 1; y < height - 1; y++) {
-      for (let x = 1; x < width - 1; x++) {
-        const centre = greyAt(x, y) * 4;
-        const neighbours =
-          greyAt(x - 1, y) +
-          greyAt(x + 1, y) +
-          greyAt(x, y - 1) +
-          greyAt(x, y + 1);
-
-        const laplacian = centre - neighbours;
-
-        total += laplacian;
-        totalSquared += laplacian * laplacian;
-        count++;
-      }
-    }
-
-    const mean = total / count;
-    return totalSquared / count - mean * mean;
   }
 
   function capturePhoto() {
@@ -167,219 +74,186 @@ export default function ScanPage() {
 
     if (!video || !canvas) return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    const context = canvas.getContext("2d");
-    if (!context) return;
-
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const sharpness = estimateSharpness(canvas);
-    const imageData = canvas.toDataURL("image/jpeg", 0.92);
-
     setFlash(true);
+    setTimeout(() => setFlash(false), 160);
 
-    setTimeout(() => {
-      setFlash(false);
-      setPhoto(imageData);
-      setPhotoQuality(sharpness < 45 ? "blurry" : "good");
-    }, 130);
-  }
+    const size = Math.min(video.videoWidth, video.videoHeight);
+    const sx = (video.videoWidth - size) / 2;
+    const sy = (video.videoHeight - size) / 2;
 
-  function startCountdown() {
-    if (countdown !== null) return;
+    canvas.width = 1200;
+    canvas.height = 1200;
 
-    if (delay === 0) {
-      shutterSound();
-      capturePhoto();
-      return;
-    }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-    let current = delay;
-    setCountdown(current);
-    beep();
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, 1200, 1200);
 
-    const timer = window.setInterval(() => {
-      current--;
-
-      if (current <= 0) {
-        window.clearInterval(timer);
-        setCountdown(null);
-        shutterSound();
-        capturePhoto();
-        return;
-      }
-
-      setCountdown(current);
-      beep(current === 1 ? 1200 : 880, current === 1 ? 180 : 120);
-    }, 1000);
+    const image = canvas.toDataURL("image/jpeg", 0.92);
+    setPhoto(image);
+    sessionStorage.setItem("skinchecker_photo", image);
+    stopCamera();
   }
 
   function retakePhoto() {
     setPhoto(null);
-    setPhotoQuality(null);
-    setCountdown(null);
-    setFlash(false);
+    sessionStorage.removeItem("skinchecker_photo");
+    startCamera();
   }
 
-  return (
-    <main className="min-h-screen bg-white">
-      <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-6 py-10">
-        <Image
-          src="/logo.png"
-          alt="SkinChecker"
-          width={260}
-          height={64}
-          priority
-          className="mx-auto mb-10"
-        />
-
-        <div className="mb-8">
-          <div className="mb-2 text-sm font-medium text-sky-600">
-            Step 3 of 5
-          </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-            <div className="h-full w-3/5 rounded-full bg-sky-600" />
-          </div>
-        </div>
-
-        <h1 className="text-4xl font-bold tracking-tight text-slate-900">
-          Take a clear photo
-        </h1>
-
-        <p className="mt-4 text-lg leading-8 text-slate-600">
-          For best results, clean your camera lens first. Remove any obstructions
-          such as hair. Use good lighting, keep the camera steady and try to fill
-          the frame with the mole or skin lesion.
-        </p>
-
-        <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-sm">
-          {photo ? (
-            <img
-              src={photo}
-              alt="Captured skin lesion"
-              className="aspect-[4/3] w-full object-cover"
-            />
-          ) : (
-            <div className="relative">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="aspect-[4/3] w-full object-cover"
-              />
-
-              {flash && <div className="absolute inset-0 z-20 bg-white" />}
-
-              {countdown !== null && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40">
-                  <div className="text-8xl font-bold text-white">
-                    {countdown}
-                  </div>
-                </div>
-              )}
-
-              {cameraError && (
-                <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-slate-700">
-                  {cameraError}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <canvas ref={canvasRef} className="hidden" />
-
-        {photo && photoQuality === "good" && (
-          <div className="mt-5 flex items-start gap-3 rounded-2xl border border-green-200 bg-green-50 p-4 text-green-800">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
-            <p className="text-sm font-medium">
-              Photo looks suitable for assessment.
-            </p>
-          </div>
-        )}
-
-        {photo && photoQuality === "blurry" && (
-          <div className="mt-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
-            <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0" />
-            <p className="text-sm font-medium">
-              This photo may be blurry. For the most accurate assessment, please
-              retake it if possible.
-            </p>
-          </div>
-        )}
-
-        {!photo && (
-          <div className="mt-8">
-            <p className="mb-3 text-sm font-medium text-slate-700">
-              Capture delay
-            </p>
-
-            <div className="grid grid-cols-4 gap-3">
-              {[0, 3, 5, 10].map((seconds) => (
-                <button
-                  key={seconds}
-                  type="button"
-                  onClick={() => setDelay(seconds)}
-                  className={`rounded-2xl border px-3 py-3 text-sm font-semibold transition ${
-                    delay === seconds
-                      ? "border-sky-600 bg-sky-50 text-sky-700"
-                      : "border-slate-200 bg-white text-slate-600"
-                  }`}
-                >
-                  {seconds === 0 ? "No delay" : `${seconds}s`}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="mt-auto pt-10">
-          {photo ? (
-            <div className="space-y-4">
-                <button
-  type="button"
-  onClick={() => {
-    if (photo) {
-      sessionStorage.setItem("skinchecker_photo", photo);
-      router.push("/analysing");
+  useEffect(() => {
+    if (screen === "camera" && !photo) {
+      startCamera();
     }
-  }}
-  className="block w-full rounded-2xl bg-sky-600 py-5 text-center text-lg font-semibold text-white shadow-lg transition hover:bg-sky-700"
->
-  Use Photo
-</button>
 
+    return () => {
+      stopCamera();
+    };
+  }, [screen]);
+
+  return (
+    <main className="min-h-screen bg-white px-5 py-6 text-slate-900">
+      {flash && (
+        <div className="fixed inset-0 z-[9999] bg-white opacity-90 pointer-events-none" />
+      )}
+
+      <div className="mx-auto flex min-h-[calc(100vh-48px)] max-w-md flex-col">
+        <header className="mb-6">
+          <div className="text-sm font-semibold text-sky-700">Step 2 of 4</div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+            <div className="h-full w-1/2 rounded-full bg-sky-600" />
+          </div>
+        </header>
+
+        {screen === "instructions" && (
+          <section className="flex flex-1 flex-col">
+            <h1 className="text-4xl font-bold tracking-tight">
+              Take a clear photo
+            </h1>
+
+            <p className="mt-4 text-lg leading-7 text-slate-600">
+              A clear, well-lit image helps SkinChecker.app provide a better AI-assisted assessment.
+            </p>
+
+            <div className="mt-8 space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-6 text-base leading-7 text-slate-700">
+              <p>Clean your camera lens before taking the photo.</p>
+              <p>Use bright, even lighting whenever possible.</p>
+              <p>Move hair, clothing or jewellery away from the lesion.</p>
+              <p>Hold the camera as steady as possible.</p>
+              <p>Fill most of the frame with the lesion, but do not crop it.</p>
+              <p>
+                If the camera struggles to focus, move it further away until the image becomes sharp,
+                then slowly move closer while keeping it in focus.
+              </p>
+              <p>Avoid digital zoom - move the camera closer instead.</p>
+            </div>
+
+            <div className="mt-auto pt-8">
               <button
                 type="button"
-                onClick={retakePhoto}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white py-5 text-lg font-semibold text-slate-700 transition hover:bg-slate-50"
+                onClick={() => setScreen("camera")}
+                className="w-full rounded-2xl bg-sky-600 py-5 text-lg font-semibold text-white shadow-lg hover:bg-sky-700"
               >
-                <RotateCcw className="h-5 w-5" />
-                Retake
+                Got it
               </button>
+
+              <Link
+                href="/details"
+                className="mt-5 block text-center text-sm text-slate-500"
+              >
+                Back
+              </Link>
             </div>
-          ) : (
+          </section>
+        )}
+
+        {screen === "camera" && (
+          <section className="flex flex-1 flex-col">
+            <h1 className="text-3xl font-bold tracking-tight">
+              Photograph the lesion
+            </h1>
+
+            <div className="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-black shadow-lg">
+              {photo ? (
+                <img
+                  src={photo}
+                  alt="Captured skin lesion"
+                  className="aspect-square w-full object-cover"
+                />
+              ) : (
+                <video
+                  ref={videoRef}
+                  playsInline
+                  muted
+                  autoPlay
+                  className="aspect-square w-full object-cover"
+                />
+              )}
+            </div>
+
+            <canvas ref={canvasRef} className="hidden" />
+
+            {cameraError && (
+              <p className="mt-4 rounded-2xl bg-red-50 p-4 text-sm text-red-700">
+                {cameraError}
+              </p>
+            )}
+
+            {!photo && (
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                {torchSupported && (
+                  <button
+                    type="button"
+                    onClick={toggleTorch}
+                    className="rounded-2xl border border-slate-300 py-4 font-semibold"
+                  >
+                    {torchOn ? "Flash Off" : "Flash On"}
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={capturePhoto}
+                  className={`rounded-2xl bg-sky-600 py-4 font-semibold text-white shadow-lg hover:bg-sky-700 ${
+                    torchSupported ? "" : "col-span-2"
+                  }`}
+                >
+                  Capture Photo
+                </button>
+              </div>
+            )}
+
+            {photo && (
+              <div className="mt-5 space-y-3">
+                <Link
+                  href="/results"
+                  className="block w-full rounded-2xl bg-sky-600 py-5 text-center text-lg font-semibold text-white shadow-lg hover:bg-sky-700"
+                >
+                  Use this photo
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={retakePhoto}
+                  className="w-full rounded-2xl border border-slate-300 py-4 font-semibold"
+                >
+                  Retake photo
+                </button>
+              </div>
+            )}
+
             <button
               type="button"
-              onClick={startCountdown}
-              disabled={countdown !== null || !!cameraError}
-              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-sky-600 py-5 text-lg font-semibold text-white shadow-lg transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              onClick={() => {
+                stopCamera();
+                setScreen("instructions");
+              }}
+              className="mt-auto pt-6 text-center text-sm text-slate-500"
             >
-              <Camera className="h-5 w-5" />
-              Take Photo
+              Back to instructions
             </button>
-          )}
-
-          <Link
-            href="/details"
-            className="mt-5 block text-center text-sm text-slate-500 hover:text-slate-700"
-          >
-            ← Back
-          </Link>
-        </div>
+          </section>
+        )}
       </div>
     </main>
   );
