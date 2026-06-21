@@ -584,10 +584,10 @@ export async function generateSkinCheckerReportPdf(data: SkinCheckerReportData):
     lineHeight: 11,
     maxLines: 13,
   });
+const abcdeTop = photoY - 30;
+  const abcdeBottom = drawAbcde(page, data, M, abcdeTop, photoW, fonts);
 
-  const abcdeBottom = drawAbcde(page, data, M, photoY - 30, photoW, fonts);
-
-  const lowerStartY = Math.min(abcdeBottom - 6, photoY - 95);
+  const lowerStartY = abcdeTop;);
   const fullW = PAGE.width - M * 2;
 
   const obsX = 280;
