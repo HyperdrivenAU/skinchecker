@@ -577,7 +577,7 @@ export async function generateSkinCheckerReportPdf(data: SkinCheckerReportData):
     drawText(page, "No submitted image available", M + 32, photoY + 80, { font: fonts.regular, size: 9, color: MUTED });
   }
 
-  drawSectionTitle(page, "Clinical Interpretation", rightX, contentTop, fonts);
+  drawSectionTitle(page, "Visual Interpretation by AI", rightX, contentTop, fonts);
   drawWrappedText(page, deriveClinicalInterpretation(data), rightX, contentTop - 18, rightW, {
     font: fonts.regular,
     size: 8.8,
