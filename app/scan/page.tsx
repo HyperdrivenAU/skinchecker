@@ -26,6 +26,7 @@ export default function ScanPage() {
   const [timerSeconds, setTimerSeconds] = useState<TimerSeconds>(0);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [analysing, setAnalysing] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   async function startCamera() {
     if (screen !== "camera" || photo) return;
@@ -82,10 +83,30 @@ export default function ScanPage() {
     }
   }
 
-  function beep() {
-    const audio = new Audio("/beep.mp3");
-    audio.play().catch(() => {});
+function beep() {
+  const AudioContextClass =
+    window.AudioContext || (window as any).webkitAudioContext;
+
+  if (!audioContextRef.current) {
+    audioContextRef.current = new AudioContextClass();
   }
+
+  const ctx = audioContextRef.current;
+  const oscillator = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  oscillator.type = "sine";
+  oscillator.frequency.value = 880;
+
+  gain.gain.setValueAtTime(0.15, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+
+  oscillator.connect(gain);
+  gain.connect(ctx.destination);
+
+  oscillator.start();
+  oscillator.stop(ctx.currentTime + 0.12);
+}
 
   function capturePhoto() {
     const video = videoRef.current;
@@ -238,7 +259,11 @@ export default function ScanPage() {
             <div className="mt-auto pt-8">
               <button
                 type="button"
-                onClick={() => setScreen("camera")}
+                // onClick={() => setScreen("camera")}
+                onClick={() => {
+  beep();
+  setScreen("camera");
+}}
                 className="w-full rounded-2xl bg-sky-600 py-5 text-lg font-semibold text-white shadow-lg hover:bg-sky-700"
               >
                 Got it
