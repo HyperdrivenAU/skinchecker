@@ -3,7 +3,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { Resend } from "resend";
 import fs from "fs";
 import path from "path";
-import { generateSkinReport } from "./reportRenderer";
+import { generateSkinCheckerReportPdf } from "./reportRenderer";
 
 export const runtime = "nodejs";
 
@@ -297,15 +297,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Image is required." }, { status: 400 });
     }
 
-    const pdfBytes = await generateSkinReport({
-  givenNames,
-  surname,
-  dob,
-  mobile,
-  email,
-  postcode,
-  image,
-  result,
+const result = payload.result;
+
+const pdfBytes = await generateSkinCheckerReportPdf({
+  patient: {
+    givenNames: payload.givenNames,
+    surname: payload.surname,
+    dob: payload.dob,
+    mobile: payload.mobile,
+    email: payload.email,
+    postcode: payload.postcode,
+  },
+  reportDate: new Date(),
+  assessment: {
+    colour: result?.colour ?? result?.assessment ?? result?.risk ?? "unknown",
+    label: result?.label ?? result?.headline,
+    confidence: result?.confidence,
+    headline: result?.headline,
+    recommendation: result?.recommendation,
+  },
+  clinicalInterpretation:
+    result?.clinicalInterpretation ??
+    result?.summary ??
+    result?.description ??
+    "",
+  abcde: result?.abcde ?? result?.ABCDE,
+  observations: result?.observations ?? [],
+  recommendedAction: result?.recommendation ?? "",
+  image: payload.image,
+  imageQuality: result?.imageQuality ?? result?.image_quality ?? "Not specified",
 });
     const filename = `SkinChecker Report - ${clean(payload.surname, "Patient")}.pdf`;
 
