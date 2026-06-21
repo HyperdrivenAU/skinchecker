@@ -410,21 +410,6 @@ function drawAssessmentBox(page: PDFPage, data: SkinCheckerReportData, x: number
     color: c.text,
   });
 
-  const summary = clean(
-    data.assessment?.summary
-      ?? data.assessment?.recommendation
-      ?? data.recommendedAction
-      ?? data.assessment?.headline,
-    "Review the recommendation below."
-  );
-
-  drawWrappedText(page, summary, x + 14, y + h - 62, w - 28, {
-    font: fonts.regular,
-    size: 9.2,
-    lineHeight: 12,
-    color: TEXT,
-    maxLines: 3,
-  });
 }
 
 function drawAbcde(page: PDFPage, data: SkinCheckerReportData, x: number, y: number, w: number, fonts: Fonts): number {
@@ -576,14 +561,14 @@ export async function generateSkinCheckerReportPdf(data: SkinCheckerReportData):
   drawAssessmentBox(page, data, M + colW + gap, topY - boxH, colW, boxH, fonts);
 
   const contentTop = topY - boxH - 34;
-  const photoW = 205;
+  const photoW = 215;
   const photoH = 170;
-  const rightX = M + photoW + 28;
+  const rightX = M + photoW + 20;
   const rightW = PAGE.width - M - rightX;
 
   drawSectionTitle(page, "Submitted Photograph", M, contentTop, fonts);
   const image = await embedImage(pdfDoc, data.image);
-  const photoY = contentTop - 190;
+  const photoY = contentTop - 182;
 
   if (image) {
     drawContainImage(page, image, M, photoY, photoW, photoH);
@@ -600,12 +585,12 @@ export async function generateSkinCheckerReportPdf(data: SkinCheckerReportData):
     maxLines: 13,
   });
 
-  const abcdeBottom = drawAbcde(page, data, M, photoY - 20, photoW, fonts);
+  const abcdeBottom = drawAbcde(page, data, M, photoY - 30, photoW, fonts);
 
-  const lowerStartY = Math.min(abcdeBottom - 18, photoY - 105);
+  const lowerStartY = Math.min(abcdeBottom - 6, photoY - 95);
   const fullW = PAGE.width - M * 2;
 
-  const obsX = 290;
+  const obsX = 280;
 const obsW = PAGE.width - obsX - M;
 
 const obsBottom = drawObservations(
