@@ -338,7 +338,7 @@ const pdfBytes = await generateSkinCheckerReportPdf({
       html: `
       <div style="font-family:Calibri,sans-serif;max-width:640px;margin:auto;padding:24px;color:#0f172a">
 
-  <p>Hi ${givenNames || "there"},</p>
+  <p>Hi ${payload.givenNames || "there"},</p>
 
   <p>Thank you for using <strong>SkinChecker.app</strong>.</p>
 
