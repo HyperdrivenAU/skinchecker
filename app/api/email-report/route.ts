@@ -3,6 +3,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { Resend } from "resend";
 import fs from "fs";
 import path from "path";
+import { generateSkinReport } from "./reportRenderer";
 
 export const runtime = "nodejs";
 
@@ -296,7 +297,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Image is required." }, { status: 400 });
     }
 
-    const pdfBytes = await makePdf(payload);
+    const pdfBytes = await generateSkinReport({
+  givenNames,
+  surname,
+  dob,
+  mobile,
+  email,
+  postcode,
+  image,
+  result,
+});
     const filename = `SkinChecker Report - ${clean(payload.surname, "Patient")}.pdf`;
 
     const from = process.env.RESEND_FROM_EMAIL || "SkinChecker.app <reports@skinchecker.app>";
@@ -306,12 +316,46 @@ export async function POST(request: NextRequest) {
       to: payload.email,
       subject: "Your SkinChecker.app assessment report",
       html: `
-        <div style="font-family:Arial,Helvetica,sans-serif;color:#111827;line-height:1.5">
-          <h2>Your SkinChecker.app assessment report</h2>
-          <p>Your PDF assessment report is attached.</p>
-          <p><strong>Important:</strong> This AI assessment is informational only and is not a medical diagnosis. Please seek medical advice for any lesion that is new, changing, bleeding, painful or concerning.</p>
-          <p>SkinChecker.app</p>
-        </div>
+      <div style="font-family:Calibri,sans-serif;max-width:640px;margin:auto;padding:24px;color:#0f172a">
+
+  <p>Hi ${givenNames || "there"},</p>
+
+  <p>Thank you for using <strong>SkinChecker.app</strong>.</p>
+
+  <p>Your <strong>SkinChecker.app Report</strong> is attached as a PDF for your records.</p>
+
+  <div style="padding:18px;border-radius:14px;background:#f0f9ff;border:1px solid #bae6fd;margin:24px 0">
+    <strong style="font-size:18px;">${result.headline}</strong>
+    <p style="margin-bottom:0;">${result.recommendation}</p>
+  </div>
+
+  <p>
+    Please remember that this report has been generated using artificial
+    intelligence from a single photograph. It is not a diagnosis and should
+    not replace assessment by a qualified healthcare professional.
+  </p>
+
+  <p>
+    If your report recommends medical review, or if you have any concerns
+    about a skin lesion, please arrange an appointment with your doctor or
+    skin cancer clinic.
+  </p>
+
+  <p>
+    Best regards,<br>
+    <strong>The SkinChecker.app Team</strong>
+  </p>
+
+  <p>
+    info@skinchecker.app<br>
+    https://skinchecker.app
+  </p>
+
+  <div style="margin-top:30px;text-align:center;">
+    <img src="https://skinchecker.app/logo-email.png"
+         alt="SkinChecker.app"
+         width="220">
+  </div>
       `,
       attachments: [
         {
