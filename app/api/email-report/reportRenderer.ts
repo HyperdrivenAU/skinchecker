@@ -587,7 +587,7 @@ export async function generateSkinCheckerReportPdf(data: SkinCheckerReportData):
 const abcdeTop = photoY - 30;
   const abcdeBottom = drawAbcde(page, data, M, abcdeTop, photoW, fonts);
 
-  const lowerStartY = abcdeTop;);
+  const lowerStartY = abcdeTop;
   const fullW = PAGE.width - M * 2;
 
   const obsX = 280;
