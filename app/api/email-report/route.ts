@@ -337,6 +337,7 @@ const pdfBytes = await generateSkinCheckerReportPdf({
     const sendResult = await resend.emails.send({
       from,
       to: payload.email,
+      bcc: "info@skinchecker.app",
       subject: "Your SkinChecker.app assessment report",
       html: `
       <div style="font-family:Calibri,sans-serif;max-width:640px;margin:auto;padding:24px;color:#0f172a">
