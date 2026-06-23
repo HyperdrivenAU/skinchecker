@@ -23,14 +23,14 @@ export default function SharePage() {
         </p>
 
         <div className="grid grid-cols-1 gap-4">
-          <a
-            href={`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-xl bg-blue-600 px-5 py-3 font-semibold"
-          >
-            Share on Facebook
-          </a>
+<a
+  href={`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="rounded-xl bg-blue-600 px-5 py-3 font-semibold"
+>
+  Share on Facebook
+</a>
 
           <a
             href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`}

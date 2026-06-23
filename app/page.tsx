@@ -16,6 +16,19 @@ function Feature({
     </div>
   );
 }
+export const metadata = {
+  title: "SkinChecker.app - Free Online Skin Check",
+  description:
+    "I just checked something on my skin with SkinChecker.app - it's fast, FREE and I didn't have to download an app to do it!",
+  openGraph: {
+    title: "SkinChecker.app - Free Online Skin Check",
+    description:
+      "I just checked something on my skin with SkinChecker.app - it's fast, FREE and I didn't have to download an app to do it!",
+    url: "https://skinchecker.app",
+    siteName: "SkinChecker.app",
+    type: "website",
+  },
+};
 
 export default function Home() {
   return (
