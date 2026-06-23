@@ -90,7 +90,7 @@ export default function DetailsPage() {
         throw new Error(responseBody?.error || "Email failed. Please try again.");
       }
 
-      window.location.href = "/result";
+      window.location.href = "/share";
     } catch (error) {
       setSendError(
         error instanceof Error
