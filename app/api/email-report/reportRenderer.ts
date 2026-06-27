@@ -431,7 +431,7 @@ function drawAssessmentBox(page: PDFPage, data: SkinCheckerReportData, x: number
       color: c.border,
     });
 
-    drawText(page, "SKINSCORE", x + 14, y + h - 73, {
+    drawText(page, "SkinScore™", x + 14, y + h - 73, {
       font: fonts.bold,
       size: 7.4,
       color: MUTED,
@@ -521,11 +521,20 @@ function deriveClinicalInterpretation(data: SkinCheckerReportData): string {
 
   if (typeof data.skinScore?.total !== "number") return base;
 
-  const factors = Array.isArray(data.skinScore.factors) && data.skinScore.factors.length
-    ? ` Contributing SkinScore factors include ${data.skinScore.factors.slice(0, 4).join(", ")}.`
-    : "";
+  const factors =
+    Array.isArray(data.skinScore.factors) && data.skinScore.factors.length
+      ? `Contributing factors include ${data.skinScore.factors
+          .slice(0, 4)
+          .join(", ")}.`
+      : "";
 
-  return `${base} SkinScore: ${data.skinScore.total}/100 (${clean(data.skinScore.grade, "Risk")} Risk).${factors}`;
+  return `${base}
+
+SkinScore™
+
+Overall Risk: ${clean(data.skinScore.grade, "Risk")} (${data.skinScore.total}/100).
+
+Your SkinScore™ combines the AI visual assessment of this lesion with the personal skin cancer risk factors you provided. ${factors}`;
 }
 
 async function drawFooter(page: PDFPage, pdfDoc: PDFDocument, fonts: Fonts) {
