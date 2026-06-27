@@ -530,7 +530,8 @@ function deriveClinicalInterpretation(data: SkinCheckerReportData): string {
 
   return `${base}
 
-SkinScore™
+
+  SkinScore™
 
 Overall Risk: ${clean(data.skinScore.grade, "Risk")} (${data.skinScore.total}/100).
 
