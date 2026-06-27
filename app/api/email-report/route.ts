@@ -18,6 +18,7 @@ type ReportPayload = {
   postcode?: string;
   image?: string;
   result?: any;
+  skinScore?: any;
 };
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -300,6 +301,7 @@ export async function POST(request: NextRequest) {
 const result = payload.result;
 
 const pdfBytes = await generateSkinCheckerReportPdf({
+  skinScore: payload.skinScore ?? null,
   patient: {
     givenNames: payload.givenNames,
     surname: payload.surname,

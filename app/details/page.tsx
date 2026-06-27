@@ -67,22 +67,25 @@ export default function DetailsPage() {
       sessionStorage.setItem("skinchecker_postcode", postcode);
       sessionStorage.setItem("skinchecker_email", email);
 
-      const response = await fetch("/api/email-report", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          givenNames,
-          surname,
-          dob,
-          mobile: finalMobile,
-          postcode,
-          email,
-          image,
-          result,
-        }),
-      });
+const skinScore = JSON.parse(sessionStorage.getItem("skinScore") || "null");
+
+const response = await fetch("/api/email-report", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    givenNames,
+    surname,
+    dob,
+    mobile: finalMobile,
+    postcode,
+    email,
+    image,
+    result,
+    skinScore,
+  }),
+});
 
       const responseBody = await response.json().catch(() => null);
 

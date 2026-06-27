@@ -33,15 +33,6 @@ export type SkinCheckerReportData = {
   recommendedAction?: string;
   image?: string;
   imageQuality?: string;
-  skinScore?: {
-    total?: number;
-    grade?: string;
-    colour?: string;
-    personal?: number;
-    uv?: number;
-    lesion?: number;
-    factors?: string[];
-  } | null;
 };
 
 type Fonts = {
@@ -409,49 +400,16 @@ function drawPatientBox(page: PDFPage, data: SkinCheckerReportData, x: number, y
 function drawAssessmentBox(page: PDFPage, data: SkinCheckerReportData, x: number, y: number, w: number, h: number, fonts: Fonts) {
   const colour = normaliseAssessmentColour(data.assessment?.colour ?? data.assessment?.label);
   const c = assessmentColours(colour);
-  const skinScore = data.skinScore;
-  const hasSkinScore = typeof skinScore?.total === "number";
 
   drawRoundedBox(page, x, y, w, h, { fill: c.bg, border: c.border, borderWidth: 1.2 });
   drawSectionTitle(page, "Assessment", x + 14, y + h - 18, fonts);
 
   drawText(page, assessmentTitle(colour), x + 14, y + h - 43, {
     font: fonts.bold,
-    size: hasSkinScore ? 14.5 : 17,
+    size: 17,
     color: c.text,
   });
 
-  if (hasSkinScore) {
-    const dividerY = y + h - 57;
-
-    page.drawLine({
-      start: { x: x + 14, y: dividerY },
-      end: { x: x + w - 14, y: dividerY },
-      thickness: 0.7,
-      color: c.border,
-    });
-
-    drawText(page, "SKINSCORE", x + 14, y + h - 73, {
-      font: fonts.bold,
-      size: 7.4,
-      color: MUTED,
-    });
-
-    drawText(page, `${skinScore.total}/100`, x + 14, y + h - 93, {
-      font: fonts.bold,
-      size: 18,
-      color: c.text,
-    });
-
-    const gradeText = `${clean(skinScore.grade, "Risk")} Risk`.toUpperCase();
-    const gradeW = textWidth(fonts.bold, gradeText, 8.6);
-
-    drawText(page, gradeText, x + w - 14 - gradeW, y + h - 88, {
-      font: fonts.bold,
-      size: 8.6,
-      color: c.text,
-    });
-  }
 }
 
 function drawAbcde(page: PDFPage, data: SkinCheckerReportData, x: number, y: number, w: number, fonts: Fonts): number {
@@ -512,20 +470,12 @@ function deriveRecommendedAction(data: SkinCheckerReportData): string {
 }
 
 function deriveClinicalInterpretation(data: SkinCheckerReportData): string {
-  const base = clean(
+  return clean(
     data.clinicalInterpretation
       ?? data.assessment?.summary
       ?? data.assessment?.headline,
     "The submitted image has been assessed by SkinChecker.app artificial intelligence. Review the ABCDE findings, observations and recommended clinical action below."
   );
-
-  if (typeof data.skinScore?.total !== "number") return base;
-
-  const factors = Array.isArray(data.skinScore.factors) && data.skinScore.factors.length
-    ? ` Contributing SkinScore factors include ${data.skinScore.factors.slice(0, 4).join(", ")}.`
-    : "";
-
-  return `${base} SkinScore: ${data.skinScore.total}/100 (${clean(data.skinScore.grade, "Risk")} Risk).${factors}`;
 }
 
 async function drawFooter(page: PDFPage, pdfDoc: PDFDocument, fonts: Fonts) {
