@@ -173,23 +173,46 @@ export default function ResultPage() {
 
         </div>
 
-        <div className="mt-10 space-y-4">
+<div className="mt-10 space-y-5">
 
-          <Link
-  href="/details"
-  className="block w-full rounded-2xl bg-sky-600 py-5 text-center text-lg font-semibold text-white shadow-lg"
->
-  Email My Report
-</Link>
+  <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5 text-center shadow-sm">
+    <h2 className="text-2xl font-bold text-sky-900">
+      Improve your report with SkinScore™
+    </h2>
 
-          <Link
-            href="/"
-            className="block w-full rounded-2xl border border-slate-300 bg-white py-5 text-center text-lg font-semibold text-slate-700"
-          >
-            Check Another Mole
-          </Link>
+    <p className="mt-3 text-slate-700">
+      Your AI has analysed your skin lesion.
+      <br />
+      Now let SkinScore™ combine that assessment with your personal skin cancer risk factors to produce a more personalised report.
+    </p>
 
-        </div>
+    <p className="mt-4 text-sm font-semibold text-sky-700">
+      ✓ Takes about 2 minutes &nbsp;&nbsp;•&nbsp;&nbsp; ✓ Completely FREE &nbsp;&nbsp;•&nbsp;&nbsp; ✓ Recommended
+    </p>
+  </div>
+
+  <Link
+    href="/skinscore"
+    className="block w-full rounded-2xl bg-sky-600 py-5 text-center text-lg font-semibold text-white shadow-lg transition hover:bg-sky-700"
+  >
+    Get My FREE SkinScore™ →
+  </Link>
+
+  <Link
+    href="/details"
+    className="block w-full rounded-2xl border border-slate-300 bg-white py-5 text-center text-lg font-semibold text-slate-700 transition hover:bg-slate-50"
+  >
+    Skip for now - Email My Report
+  </Link>
+
+  <Link
+    href="/"
+    className="block w-full rounded-2xl border border-slate-300 bg-white py-5 text-center text-lg font-semibold text-slate-700 transition hover:bg-slate-50"
+  >
+    Check Another Mole
+  </Link>
+
+</div>
 
       </div>
     </main>
