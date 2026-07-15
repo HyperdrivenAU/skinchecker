@@ -47,6 +47,7 @@ export async function sendFreeListingNotification(
   const originalRecipient = recipientForClinic(clinic);
   const to = notificationRecipientForClinic(clinic);
   const postcode = impression.userPostcode || "your local area";
+  const marketingUrl = "https://skinchecker.app";
   const signupUrl = `${process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "https://app.skinchecker.app"}/clinics/signup`;
 
   const result = await resend.emails.send({
@@ -60,9 +61,9 @@ export async function sendFreeListingNotification(
           Test mode: this clinic email was routed to ${to}. The original clinic recipient would have been ${originalRecipient || "not available"}.
         </p>
         <p>Hi Team,</p>
-        <p>A SkinChecker.app user in postcode ${postcode} recently looked for nearby skin clinics after completing a skin lesion check.</p>
+        <p>A <a href="${marketingUrl}" style="color:#0369a1;font-weight:700;text-decoration:none;">SkinChecker.app</a> user in postcode ${postcode} recently looked for nearby skin clinics after completing a skin lesion check.</p>
         <p>Would you like to join our network of skin clinics and receive more visibility from patients looking for in-person skin checks?</p>
-        <p>SkinChecker.app is free for patients to use and requires no download or installation.</p>
+        <p><a href="${marketingUrl}" style="color:#0369a1;font-weight:700;text-decoration:none;">SkinChecker.app</a> is free for patients to use and requires no download or installation.</p>
         <p>Preferred Partner clinics receive enhanced visibility, a partner badge, full clinic details, booking links and priority placement in relevant nearby searches.</p>
         <p>
           <a href="${signupUrl}" style="display:inline-block;background:#0284c7;color:white;padding:14px 18px;border-radius:12px;text-decoration:none;font-weight:bold">
@@ -75,7 +76,6 @@ export async function sendFreeListingNotification(
           SkinChecker.app<br>
           0418 230 069
         </p>
-        <p style="font-size:13px;color:#64748b">This message does not include patient photographs, reports or identifying health information.</p>
       </div>
     `,
   });

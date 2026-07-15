@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 const inputClass =
   "w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-100";
@@ -64,6 +65,14 @@ export default function ClinicSignupPage() {
   return (
     <main className="min-h-screen bg-white px-6 py-10">
       <div className="mx-auto max-w-3xl">
+        <Image
+          src="/logo.png"
+          alt="SkinChecker.app"
+          width={260}
+          height={64}
+          priority
+          className="mb-10"
+        />
         <h1 className="text-4xl font-bold tracking-tight text-slate-950">
           Preferred Partner application
         </h1>

@@ -8,9 +8,11 @@ import {
   Loader2,
   MapPin,
   Phone,
+  Send,
 } from "lucide-react";
 
 type Clinic = {
+  id?: string;
   clinicId?: string;
   clinicUuid?: string;
   name: string;
@@ -19,6 +21,8 @@ type Clinic = {
   state?: string;
   postcode?: string;
   phone?: string;
+  email?: string;
+  contactEmail?: string;
   website?: string;
   bookingUrl?: string;
   servicesOffered?: string[];
@@ -70,6 +74,10 @@ export function NearbyClinics() {
   const [clinics, setClinics] = useState<ClinicResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [referralConsent, setReferralConsent] = useState<Record<string, boolean>>({});
+  const [referralSending, setReferralSending] = useState<Record<string, boolean>>({});
+  const [referralMessage, setReferralMessage] = useState<Record<string, string>>({});
+  const [referralError, setReferralError] = useState<Record<string, string>>({});
 
   async function loadClinics(position?: GeolocationPosition, fallbackPostcode = postcode) {
     try {
@@ -127,6 +135,125 @@ export function NearbyClinics() {
   }, []);
 
   const results = clinics?.results ?? [];
+
+  function clinicKey(result: ClinicResult) {
+    return result.clinic.id || result.clinic.clinicUuid || result.clinic.name;
+  }
+
+  async function sendPhotoReferral(result: ClinicResult) {
+    const key = clinicKey(result);
+
+    try {
+      setReferralSending((current) => ({ ...current, [key]: true }));
+      setReferralError((current) => ({ ...current, [key]: "" }));
+      setReferralMessage((current) => ({ ...current, [key]: "" }));
+
+      if (!referralConsent[key]) {
+        throw new Error("Please tick the consent box first.");
+      }
+
+      const image = sessionStorage.getItem("skinchecker_photo");
+      const assessment = JSON.parse(
+        sessionStorage.getItem("skinchecker_result") || "{}"
+      );
+
+      if (!image) {
+        throw new Error("We could not find the photo. Please retake it and try again.");
+      }
+
+      const response = await fetch("/api/clinics/referral", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clinicId: result.clinic.id,
+          clinicUuid: result.clinic.clinicUuid,
+          consentToSendPhoto: true,
+          image,
+          result: assessment,
+          postcode: postcode || sessionStorage.getItem("skinchecker_postcode"),
+          givenNames: sessionStorage.getItem("skinchecker_givenNames"),
+          surname: sessionStorage.getItem("skinchecker_surname"),
+          patientEmail: sessionStorage.getItem("skinchecker_email"),
+          patientMobile: sessionStorage.getItem("skinchecker_mobile"),
+        }),
+      });
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || "We could not send your photo to the clinic.");
+      }
+
+      setReferralMessage((current) => ({
+        ...current,
+        [key]: "Your photo has been sent to the clinic.",
+      }));
+    } catch (sendError) {
+      setReferralError((current) => ({
+        ...current,
+        [key]:
+          sendError instanceof Error
+            ? sendError.message
+            : "We could not send your photo to the clinic.",
+      }));
+    } finally {
+      setReferralSending((current) => ({ ...current, [key]: false }));
+    }
+  }
+
+  function referralPanel(result: ClinicResult) {
+    const key = clinicKey(result);
+    const canEmailClinic = Boolean(result.clinic.email || result.clinic.contactEmail);
+
+    return (
+      <div className="mt-4 rounded-2xl border border-sky-100 bg-white p-4">
+        <label className="flex items-start gap-3 text-sm leading-6 text-slate-700">
+          <input
+            type="checkbox"
+            checked={Boolean(referralConsent[key])}
+            onChange={(event) =>
+              setReferralConsent((current) => ({
+                ...current,
+                [key]: event.target.checked,
+              }))
+            }
+            className="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600"
+          />
+          <span>
+            I consent to SkinChecker.app sending my lesion photo and assessment
+            summary to this clinic for review.
+          </span>
+        </label>
+        <button
+          type="button"
+          disabled={!canEmailClinic || !referralConsent[key] || referralSending[key]}
+          onClick={() => sendPhotoReferral(result)}
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 sm:w-auto"
+        >
+          {referralSending[key] ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+          Send my photo to this clinic
+        </button>
+        {!canEmailClinic && (
+          <p className="mt-2 text-xs leading-5 text-slate-500">
+            We do not have a clinic email address for this listing yet.
+          </p>
+        )}
+        {referralMessage[key] && (
+          <p className="mt-2 text-sm font-medium text-green-700">
+            {referralMessage[key]}
+          </p>
+        )}
+        {referralError[key] && (
+          <p className="mt-2 text-sm font-medium text-red-700">
+            {referralError[key]}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -269,6 +396,7 @@ export function NearbyClinics() {
                     </a>
                   )}
               </div>
+              {referralPanel(result)}
             </article>
           ) : (
             <article
@@ -293,6 +421,7 @@ export function NearbyClinics() {
                   <ExternalLink className="h-4 w-4" />
                 </a>
               )}
+              {referralPanel(result)}
             </article>
           )
         )}
