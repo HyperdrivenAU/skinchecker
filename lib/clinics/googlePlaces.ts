@@ -1,5 +1,5 @@
 import { clinicConfig } from "./config";
-import { validCoordinates } from "./postcodes";
+import { exactCoordinatesForPostcode, validCoordinates } from "./postcodes";
 import type { Clinic } from "./types";
 
 type GooglePlace = {
@@ -62,7 +62,7 @@ function searchPoint(input: GooglePlacesSearchInput) {
     };
   }
 
-  return null;
+  return exactCoordinatesForPostcode(input.postcode);
 }
 
 function mapPlaceToClinic(place: GooglePlace): Clinic | null {

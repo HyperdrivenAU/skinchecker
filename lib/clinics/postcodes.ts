@@ -6,6 +6,7 @@ export type Coordinates = {
 const knownPostcodes: Record<string, Coordinates> = {
   "0800": { latitude: -12.4634, longitude: 130.8456 },
   "2000": { latitude: -33.8688, longitude: 151.2093 },
+  "2125": { latitude: -33.7438, longitude: 151.0501 },
   "2150": { latitude: -33.8136, longitude: 151.0034 },
   "3000": { latitude: -37.8136, longitude: 144.9631 },
   "4000": { latitude: -27.4698, longitude: 153.0251 },
@@ -43,6 +44,12 @@ export function coordinatesForPostcode(postcode?: string): Coordinates | null {
   );
 
   return state?.coordinates ?? null;
+}
+
+export function exactCoordinatesForPostcode(postcode?: string): Coordinates | null {
+  if (!postcode) return null;
+  const normalised = postcode.replace(/\D/g, "").padStart(4, "0").slice(0, 4);
+  return knownPostcodes[normalised] ?? null;
 }
 
 export function haversineKm(from: Coordinates, to: Coordinates) {

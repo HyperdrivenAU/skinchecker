@@ -138,6 +138,26 @@ test("postcode-only search uses approximate postcode coordinates", () => {
   assert.equal(result.results.length, 1);
 });
 
+test("postcode 2125 uses Hills district coordinates", () => {
+  const result = searchClinics(
+    [
+      clinic({
+        name: "Hills Clinic",
+        postcode: "2154",
+        latitude: -33.7302,
+        longitude: 150.9929,
+      }),
+    ],
+    { postcode: "2125" },
+    options
+  );
+
+  assert.equal(result.results.length, 1);
+  assert.equal(result.results[0].clinic.name, "Hills Clinic");
+  assert.equal(result.results[0].distanceKm !== null, true);
+  assert.equal(result.results[0].distanceKm! < 10, true);
+});
+
 test("geolocation denied falls back to postcode search", () => {
   const result = searchClinics(
     [clinic({ name: "Sydney Clinic" })],
