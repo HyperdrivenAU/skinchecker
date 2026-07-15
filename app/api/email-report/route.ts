@@ -4,6 +4,10 @@ import { Resend } from "resend";
 import fs from "fs";
 import path from "path";
 import { generateSkinCheckerReportPdf } from "./reportRenderer";
+import {
+  PLUS_MONTHLY_PRICE_AUD,
+  PLUS_YEARLY_PRICE_AUD,
+} from "@/lib/constants";
 
 export const runtime = "nodejs";
 
@@ -22,6 +26,58 @@ type ReportPayload = {
 };
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+function appBaseUrl() {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  return "https://app.skinchecker.app";
+}
+
+function shouldOfferPlus(result: unknown) {
+  if (
+    result &&
+    typeof result === "object" &&
+    "trafficLight" in result &&
+    (result as { trafficLight?: unknown }).trafficLight === "green"
+  ) {
+    return true;
+  }
+
+  return inferRisk(result) === "low";
+}
+
+function plusLowRiskOfferHtml(result: unknown) {
+  if (!shouldOfferPlus(result)) return "";
+
+  const plusUrl = `${appBaseUrl()}/plus`;
+
+  return `
+  <div style="padding:18px;border-radius:14px;background:#f0fdf4;border:1px solid #bbf7d0;margin:24px 0">
+    <strong style="font-size:18px;color:#166534;">Track this lesion over time</strong>
+    <p style="line-height:1.6;color:#334155;">
+      Your report appears low risk, but it is still sensible to keep an eye on any mole or skin spot that changes.
+      SkinChecker Plus lets you securely save this photo and report, map it to the right lesion, and compare future photos over time.
+    </p>
+    <p style="line-height:1.6;color:#334155;">
+      Plans start at <strong>${PLUS_MONTHLY_PRICE_AUD}/month</strong>, or <strong>${PLUS_YEARLY_PRICE_AUD}/year</strong>.
+    </p>
+    <p>
+      <a href="${plusUrl}" style="display:inline-block;background:#0284c7;color:#ffffff;padding:14px 18px;border-radius:12px;text-decoration:none;font-weight:bold;">
+        Save and track this lesion
+      </a>
+    </p>
+    <p style="font-size:12px;line-height:1.5;color:#64748b;margin-bottom:0;">
+      SkinChecker Plus helps you compare visible changes over time. It is not a diagnosis and does not replace medical assessment.
+    </p>
+  </div>
+  `;
+}
 
 function clean(value: unknown, fallback = "Not provided") {
   if (value === null || value === undefined) return fallback;
@@ -335,6 +391,7 @@ const pdfBytes = await generateSkinCheckerReportPdf({
     const filename = `${clean(payload.surname, "PATIENT")}, ${clean(payload.givenNames, "Unknown")} - ${clean(payload.dob, "Unknown DOB")} - SkinChecker Report.pdf`;
 
     const from = process.env.RESEND_FROM_EMAIL || "SkinChecker.app <reports@skinchecker.app>";
+    const plusOfferHtml = plusLowRiskOfferHtml(result);
 
     const sendResult = await resend.emails.send({
       from,
@@ -354,6 +411,8 @@ const pdfBytes = await generateSkinCheckerReportPdf({
     <strong style="font-size:18px;">${result.headline}</strong>
     <p style="margin-bottom:0;">${result.recommendation}</p>
   </div>
+
+  ${plusOfferHtml}
 
   <p>
     Please remember that this report has been generated using artificial
