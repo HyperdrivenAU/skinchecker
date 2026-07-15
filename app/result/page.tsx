@@ -9,6 +9,8 @@ import {
   Info,
   ShieldAlert,
 } from "lucide-react";
+import { NearbyClinics } from "@/components/NearbyClinics";
+import { SkinCheckerPlusOffer } from "@/components/SkinCheckerPlusOffer";
 
 type Result = {
   trafficLight: "green" | "yellow" | "red" | "blue";
@@ -27,7 +29,7 @@ export default function ResultPage() {
     const stored = sessionStorage.getItem("skinchecker_result");
 
     if (stored) {
-      setResult(JSON.parse(stored));
+      queueMicrotask(() => setResult(JSON.parse(stored)));
       setTimeout(() => setShowCircle(true), 250);
     }
   }, []);
@@ -142,26 +144,7 @@ export default function ResultPage() {
           </p>
         </div>
 
-        {result.trafficLight === "yellow" && (
-
-          <div className="mt-8 rounded-3xl border border-sky-200 bg-sky-50 p-6">
-
-            <h2 className="text-xl font-bold text-sky-700">
-              Track this mole over time
-            </h2>
-
-            <p className="mt-3 leading-7 text-slate-700">
-              SkinChecker Plus stores your photos securely, reminds you when
-              it's time to check again and compares changes over time.
-            </p>
-
-            <button className="mt-5 w-full rounded-2xl bg-sky-600 py-4 text-lg font-semibold text-white">
-              Start Free Trial
-            </button>
-
-          </div>
-
-        )}
+        {result.trafficLight === "yellow" && <SkinCheckerPlusOffer />}
 
         <div className="mt-8 flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-5">
 
@@ -172,6 +155,8 @@ export default function ResultPage() {
           </p>
 
         </div>
+
+        <NearbyClinics />
 
 <div className="mt-10 space-y-5">
 

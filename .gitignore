@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/.clinic-data
+/.test-build
 
 # next.js
 /.next/

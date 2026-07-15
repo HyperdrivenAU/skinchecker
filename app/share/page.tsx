@@ -10,6 +10,7 @@ import {
   FaShareNodes,
   FaRegCopy,
 } from "react-icons/fa6";
+import { NearbyClinics } from "@/components/NearbyClinics";
 
 const shareUrl = "https://skinchecker.app";
 
@@ -96,6 +97,10 @@ export default function SharePage() {
             Simply paste it into Facebook, LinkedIn, Instagram, X or anywhere else.
           </div>
         )}
+
+        <div className="w-full">
+          <NearbyClinics />
+        </div>
 
         <Link
           href="/"
