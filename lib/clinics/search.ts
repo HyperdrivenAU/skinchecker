@@ -11,6 +11,11 @@ import type {
   ClinicSearchResult,
 } from "./types";
 
+type ClinicSearchOptions = Pick<
+  typeof clinicConfig,
+  "metroRadiusKm" | "regionalRadiusKm" | "maxResults"
+>;
+
 const relevantTerms = [
   "skin",
   "skin cancer",
@@ -87,7 +92,7 @@ function byDistanceThenPriority(a: ClinicSearchResult, b: ClinicSearchResult) {
 export function searchClinics(
   clinics: Clinic[],
   input: ClinicSearchInput,
-  options = clinicConfig
+  options: ClinicSearchOptions = clinicConfig
 ): ClinicSearchResponse {
   const deviceLocation =
     typeof input.latitude === "number" &&

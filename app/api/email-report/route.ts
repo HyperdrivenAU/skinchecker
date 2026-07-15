@@ -8,6 +8,8 @@ import {
   PLUS_MONTHLY_PRICE_AUD,
   PLUS_YEARLY_PRICE_AUD,
 } from "@/lib/constants";
+import { findNearbyClinicsWithFallback } from "@/lib/clinics/directory";
+import type { ClinicSearchResponse } from "@/lib/clinics/types";
 
 export const runtime = "nodejs";
 
@@ -79,10 +81,86 @@ function plusLowRiskOfferHtml(result: unknown) {
   `;
 }
 
+function nearbyClinicsEmailHtml(response: ClinicSearchResponse | null) {
+  if (!response?.results.length) return "";
+
+  const clinicItems = response.results
+    .slice(0, 3)
+    .map((result) => {
+      const clinic = result.clinic;
+      const href = safeHref(clinic.website);
+      const distance =
+        typeof result.distanceKm === "number"
+          ? `<span style="color:#64748b;">${result.distanceKm} km away</span>`
+          : "";
+      const phone = clinic.phone
+        ? `<br><span style="color:#334155;">Phone: ${escapeHtml(clinic.phone)}</span>`
+        : "";
+      const address = clinic.address
+        ? `<br><span style="color:#334155;">${escapeHtml(clinic.address)}</span>`
+        : "";
+      const website = href
+        ? `<br><a href="${href}" style="color:#0369a1;">Clinic website or map listing</a>`
+        : "";
+
+      return `
+        <li style="margin:0 0 14px 0;padding:0;">
+          <strong style="color:#0f172a;">${escapeHtml(clinic.name)}</strong>
+          ${distance ? `<br>${distance}` : ""}
+          ${address}
+          ${phone}
+          ${website}
+        </li>
+      `;
+    })
+    .join("");
+
+  return `
+    <div style="padding:18px;border-radius:14px;background:#f8fafc;border:1px solid #cbd5e1;margin:24px 0">
+      <strong style="font-size:18px;color:#0f172a;">Nearby skin clinics</strong>
+      <p style="line-height:1.6;color:#334155;">
+        If you would like a professional skin check, these nearby clinics may be useful.
+      </p>
+      <ol style="padding-left:20px;margin:0;">
+        ${clinicItems}
+      </ol>
+      <p style="font-size:12px;line-height:1.5;color:#64748b;margin:14px 0 0;">
+        Clinic information is provided for convenience only and is not a referral.
+        ${
+          response.message
+            ? "Some details may have been sourced from Google Places and should be confirmed directly with the clinic."
+            : "Please confirm availability, fees and suitability directly with the clinic."
+        }
+      </p>
+    </div>
+  `;
+}
+
 function clean(value: unknown, fallback = "Not provided") {
   if (value === null || value === undefined) return fallback;
   const text = String(value).trim();
   return text.length ? text : fallback;
+}
+
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function safeHref(value: unknown) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+
+  try {
+    const url = new URL(raw);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.href : "";
+  } catch {
+    return "";
+  }
 }
 
 function stripDataUrl(dataUrl: string) {
@@ -392,6 +470,20 @@ const pdfBytes = await generateSkinCheckerReportPdf({
 
     const from = process.env.RESEND_FROM_EMAIL || "SkinChecker.app <reports@skinchecker.app>";
     const plusOfferHtml = plusLowRiskOfferHtml(result);
+    let nearbyClinicsHtml = "";
+
+    const reportPostcode = payload.postcode?.replace(/\D/g, "").slice(0, 4);
+    if (reportPostcode) {
+      try {
+        const nearbyClinics = await findNearbyClinicsWithFallback({
+          postcode: reportPostcode,
+          skinScoreCategory: inferRisk(result),
+        });
+        nearbyClinicsHtml = nearbyClinicsEmailHtml(nearbyClinics);
+      } catch (error) {
+        console.error("Nearby clinic email block failed", error);
+      }
+    }
 
     const sendResult = await resend.emails.send({
       from,
@@ -413,6 +505,8 @@ const pdfBytes = await generateSkinCheckerReportPdf({
   </div>
 
   ${plusOfferHtml}
+
+  ${nearbyClinicsHtml}
 
   <p>
     Please remember that this report has been generated using artificial

@@ -25,6 +25,10 @@ const clinicSelect = [
   "google_place_id",
   "phone",
   "email",
+  "email_source",
+  "email_status",
+  "email_last_checked_at",
+  "email_lookup_url",
   "website",
   "booking_url",
   "contact_person",
@@ -136,6 +140,10 @@ export function mapSupabaseClinic(row: SupabaseRow): Clinic {
     googlePlaceId: textFromRow(row, "google_place_id"),
     phone: textFromRow(row, "phone"),
     email: textFromRow(row, "email"),
+    emailSource: textFromRow(row, "email_source"),
+    emailStatus: textFromRow(row, "email_status"),
+    emailLastCheckedAt: textFromRow(row, "email_last_checked_at"),
+    emailLookupUrl: textFromRow(row, "email_lookup_url"),
     website: textFromRow(row, "website"),
     bookingUrl: textFromRow(row, "booking_url"),
     contactPerson: textFromRow(row, "contact_person"),
@@ -239,6 +247,65 @@ export async function fetchClinicsNearSearch(input: {
   });
 
   return rows.map(mapSupabaseClinic);
+}
+
+function googlePlacesClinicToRow(clinic: Clinic) {
+  const row: Record<string, unknown> = {
+    clinic_name: clinic.name,
+    clinic_type: clinic.clinicType || "Skin clinic",
+    relationship_status: "free",
+    active: clinic.active,
+    display_in_app: clinic.displayInApp,
+    address: clinic.address || null,
+    suburb: clinic.suburb || null,
+    state: clinic.state || null,
+    postcode: clinic.postcode || null,
+    country: clinic.country || "Australia",
+    latitude: clinic.latitude ?? null,
+    longitude: clinic.longitude ?? null,
+    google_place_id: clinic.googlePlaceId || null,
+    phone: clinic.phone || null,
+    email: clinic.email || undefined,
+    contact_email: clinic.contactEmail || clinic.email || undefined,
+    email_source: clinic.emailSource || undefined,
+    email_status: clinic.emailStatus || undefined,
+    email_last_checked_at: clinic.emailLastCheckedAt || undefined,
+    email_lookup_url: clinic.emailLookupUrl || undefined,
+    website: clinic.website || null,
+    booking_url: clinic.bookingUrl || null,
+    services_offered: clinic.servicesOffered || ["Skin checks"],
+    display_booking_button: false,
+    public_notes: clinic.publicNotes || null,
+    internal_notes: clinic.internalNotes || null,
+    sales_status: clinic.salesStatus || "pending_google_places",
+    source: clinic.source || "google_places",
+    booking_enabled: false,
+    priority: clinic.priority ?? 0,
+    claimed: false,
+  };
+
+  return row;
+}
+
+export async function upsertGooglePlacesClinics(clinics: Clinic[]) {
+  const rows = clinics
+    .filter((clinic) => clinic.googlePlaceId)
+    .map(googlePlacesClinicToRow);
+
+  if (!rows.length) return [];
+
+  const savedRows = await supabaseRequest<SupabaseRow[]>(
+    "/rest/v1/clinics?on_conflict=google_place_id",
+    {
+      method: "POST",
+      headers: {
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
+      body: JSON.stringify(rows),
+    }
+  );
+
+  return savedRows.map(mapSupabaseClinic);
 }
 
 export async function fetchClinicByIdOrUuid(identifier: string) {

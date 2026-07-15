@@ -43,6 +43,12 @@ export const clinicConfig = {
     process.env.CLINIC_SALES_EMAIL || "partners@skinchecker.app",
   clinicEmailsEnabled: booleanFromEnv("CLINIC_EMAILS_ENABLED", false),
   clickTrackingEnabled: booleanFromEnv("CLINIC_CLICK_TRACKING_ENABLED", true),
+  googlePlacesFallbackEnabled: booleanFromEnv(
+    "CLINIC_GOOGLE_PLACES_FALLBACK_ENABLED",
+    true
+  ),
+  googlePlacesApiKey:
+    process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_MAPS_API_KEY,
   stripeStandardPriceId: process.env.STRIPE_STANDARD_PRICE_ID,
   stripeFoundationPriceId: process.env.STRIPE_FOUNDATION_PRICE_ID,
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,

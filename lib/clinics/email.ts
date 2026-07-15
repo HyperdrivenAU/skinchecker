@@ -7,13 +7,18 @@ import {
 import type { Clinic, ClinicSearchImpression } from "./types";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const clinicEmailTestRecipient = "inicholson@hyperdriven.com.au";
 
 function recipientForClinic(clinic: Clinic) {
   return clinic.contactEmail || clinic.email || "";
 }
 
+function notificationRecipientForClinic(clinic: Clinic) {
+  return clinicEmailTestRecipient || recipientForClinic(clinic);
+}
+
 export async function canSendFreeListingNotification(clinic: Clinic) {
-  const recipient = recipientForClinic(clinic);
+  const recipient = notificationRecipientForClinic(clinic);
   if (!recipient) return false;
 
   const lastSent = await findLastFreeListingNotification(
@@ -39,28 +44,38 @@ export async function sendFreeListingNotification(
     return { skipped: "throttled-or-no-recipient" };
   }
 
-  const to = recipientForClinic(clinic);
+  const originalRecipient = recipientForClinic(clinic);
+  const to = notificationRecipientForClinic(clinic);
   const postcode = impression.userPostcode || "your local area";
+  const signupUrl = `${process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "https://app.skinchecker.app"}/clinics/signup`;
 
   const result = await resend.emails.send({
     from: clinicConfig.notificationSender,
     to,
     bcc: clinicConfig.salesEmailAddress,
-    subject: "Your clinic appeared in a SkinChecker.app search",
+    subject: "[TEST] SkinChecker.app patients are looking for clinics in your area",
     html: `
       <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;padding:24px;color:#0f172a">
-        <h1 style="font-size:24px;margin:0 0 16px">Your clinic appeared in a SkinChecker.app search</h1>
-        <p>Your clinic recently appeared in a nearby clinic search on SkinChecker.app for ${postcode}.</p>
-        <p>As there was no Preferred Partner available in the area, your clinic was displayed as a basic free listing.</p>
-        <p>Free listings display limited clinic information and are only shown where an appropriate Preferred Partner is not available.</p>
-        <p>Preferred Partners receive enhanced visibility, a prominent partner badge, full clinic details, booking links and priority placement in relevant nearby searches.</p>
-        <p>This notification confirms that your clinic appeared in a search. It does not mean that the user contacted or booked with your clinic.</p>
+        <p style="padding:12px;border-radius:10px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;">
+          Test mode: this clinic email was routed to ${to}. The original clinic recipient would have been ${originalRecipient || "not available"}.
+        </p>
+        <p>Hi Team,</p>
+        <p>A SkinChecker.app user in postcode ${postcode} recently looked for nearby skin clinics after completing a skin lesion check.</p>
+        <p>Would you like to join our network of skin clinics and receive more visibility from patients looking for in-person skin checks?</p>
+        <p>SkinChecker.app is free for patients to use and requires no download or installation.</p>
+        <p>Preferred Partner clinics receive enhanced visibility, a partner badge, full clinic details, booking links and priority placement in relevant nearby searches.</p>
         <p>
-          <a href="${clinicConfig.partnershipPageUrl}" style="display:inline-block;background:#0284c7;color:white;padding:14px 18px;border-radius:12px;text-decoration:none;font-weight:bold">
-            Review Preferred Partner packages
+          <a href="${signupUrl}" style="display:inline-block;background:#0284c7;color:white;padding:14px 18px;border-radius:12px;text-decoration:none;font-weight:bold">
+            Join the SkinChecker clinic network
           </a>
         </p>
-        <p style="font-size:13px;color:#64748b">SkinChecker.app does not send identifiable patient health information to clinics for search appearances.</p>
+        <p>Best regards,</p>
+        <p>
+          Ian Nicholson<br>
+          SkinChecker.app<br>
+          0418 230 069
+        </p>
+        <p style="font-size:13px;color:#64748b">This message does not include patient photographs, reports or identifying health information.</p>
       </div>
     `,
   });

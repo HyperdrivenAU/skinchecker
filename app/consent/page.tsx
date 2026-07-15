@@ -13,18 +13,18 @@ export default function ConsentPage() {
 
   return (
     <main className="min-h-screen bg-white">
-      <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-6 py-10">
+      <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-5 py-6">
 
         <Image
           src="/logo.png"
           alt="SkinChecker"
-          width={260}
-          height={64}
+          width={210}
+          height={52}
           priority
-          className="mx-auto mb-10"
+          className="mx-auto mb-6"
         />
 
-        <div className="mb-8">
+        <div className="mb-5">
           <div className="mb-2 text-sm font-medium text-sky-600">
             Step 1 of 5
           </div>
@@ -34,52 +34,52 @@ export default function ConsentPage() {
           </div>
         </div>
 
-        <h1 className="text-4xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
           Before we begin...
         </h1>
 
-        <p className="mt-4 text-lg leading-6 text-slate-600">
+        <p className="mt-3 text-base leading-6 text-slate-600">
           SkinChecker uses artificial intelligence (AI) to analyse photographs
-          of skin lesions. Before continuing, please confirm that you understand
-          and agree to the following.
+          of skin lesions. Please confirm that you understand and agree to the
+          following.
         </p>
 
-        <div className="mt-10 space-y-6">
+        <div className="mt-6 space-y-3">
 
-          <label className="flex items-start gap-4 rounded-2xl border border-slate-200 p-5">
+          <label className="flex items-start gap-3 rounded-2xl border border-slate-200 p-4">
             <input
               type="checkbox"
               checked={consent1}
               onChange={(e) => setConsent1(e.target.checked)}
-              className="mt-1 h-5 w-5 accent-sky-600"
+              className="mt-0.5 h-5 w-5 flex-none accent-sky-600"
             />
-            <span className="text-slate-700">
+            <span className="text-sm leading-6 text-slate-700">
               I consent to SkinChecker analysing my uploaded image using
               artificial intelligence (AI).
             </span>
           </label>
 
-          <label className="flex items-start gap-4 rounded-2xl border border-slate-200 p-5">
+          <label className="flex items-start gap-3 rounded-2xl border border-slate-200 p-4">
             <input
               type="checkbox"
               checked={consent2}
               onChange={(e) => setConsent2(e.target.checked)}
-              className="mt-1 h-5 w-5 accent-sky-600"
+              className="mt-0.5 h-5 w-5 flex-none accent-sky-600"
             />
-            <span className="text-slate-700">
+            <span className="text-sm leading-6 text-slate-700">
               I understand this assessment is not a medical diagnosis and does
               not replace advice from a qualified healthcare professional.
             </span>
           </label>
 
-          <label className="flex items-start gap-4 rounded-2xl border border-slate-200 p-5">
+          <label className="flex items-start gap-3 rounded-2xl border border-slate-200 p-4">
             <input
               type="checkbox"
               checked={consent3}
               onChange={(e) => setConsent3(e.target.checked)}
-              className="mt-1 h-5 w-5 accent-sky-600"
+              className="mt-0.5 h-5 w-5 flex-none accent-sky-600"
             />
-            <span className="text-slate-700">
+            <span className="text-sm leading-6 text-slate-700">
               I have read and agree to the{" "}
               <Link
                 href="/privacy"
@@ -99,11 +99,11 @@ export default function ConsentPage() {
 
         </div>
 
-        <div className="mt-auto pt-12">
+        <div className="pt-6">
 
           <Link
             href={canContinue ? "/scan" : "#"}
-            className={`block w-full rounded-2xl py-5 text-center text-lg font-semibold transition ${
+            className={`block w-full rounded-2xl py-4 text-center text-lg font-semibold transition ${
               canContinue
                 ? "bg-sky-600 text-white shadow-lg hover:bg-sky-700"
                 : "cursor-not-allowed bg-slate-200 text-slate-400"
@@ -114,7 +114,7 @@ export default function ConsentPage() {
 
           <Link
             href="/"
-            className="mt-5 block text-center text-sm text-slate-500 hover:text-slate-700"
+            className="mt-4 block text-center text-sm text-slate-500 hover:text-slate-700"
           >
             ← Back
           </Link>

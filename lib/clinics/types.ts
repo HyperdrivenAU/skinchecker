@@ -31,6 +31,10 @@ export type Clinic = {
   googlePlaceId?: string;
   phone?: string;
   email?: string;
+  emailSource?: string;
+  emailStatus?: string;
+  emailLastCheckedAt?: string;
+  emailLookupUrl?: string;
   website?: string;
   bookingUrl?: string;
   contactPerson?: string;

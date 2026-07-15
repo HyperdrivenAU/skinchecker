@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clinicConfig, isLikelyMetroPostcode } from "@/lib/clinics/config";
+import { findNearbyClinicsWithFallback } from "@/lib/clinics/directory";
 import { sendFreeListingNotification } from "@/lib/clinics/email";
-import { searchClinics } from "@/lib/clinics/search";
 import {
   createImpressionId,
   recordClinicSearchImpressions,
 } from "@/lib/clinics/store";
-import type { Clinic, ClinicSearchImpression } from "@/lib/clinics/types";
-import { fetchClinicsNearSearch } from "@/lib/clinics/supabase";
+import type { ClinicSearchImpression } from "@/lib/clinics/types";
 
 export const runtime = "nodejs";
 
@@ -23,17 +22,22 @@ export async function POST(request: NextRequest) {
     const longitude =
       typeof body.longitude === "number" ? body.longitude : undefined;
 
-    let clinics: Clinic[] = [];
     const radiusKm = isLikelyMetroPostcode(postcode)
       ? clinicConfig.metroRadiusKm
       : clinicConfig.regionalRadiusKm;
+    let response;
 
     try {
-      clinics = await fetchClinicsNearSearch({
+      response = await findNearbyClinicsWithFallback({
         postcode,
         latitude,
         longitude,
         radiusKm,
+        reportId: typeof body.reportId === "string" ? body.reportId : undefined,
+        skinScoreCategory:
+          typeof body.skinScoreCategory === "string"
+            ? body.skinScoreCategory
+            : undefined,
       });
     } catch (error) {
       console.error("Clinic lookup failed", error);
@@ -46,17 +50,6 @@ export async function POST(request: NextRequest) {
           "We could not load nearby clinics at this time. You can still download or email your SkinChecker report.",
       });
     }
-
-    const response = searchClinics(clinics, {
-      postcode,
-      latitude,
-      longitude,
-      reportId: typeof body.reportId === "string" ? body.reportId : undefined,
-      skinScoreCategory:
-        typeof body.skinScoreCategory === "string"
-          ? body.skinScoreCategory
-          : undefined,
-    });
 
     const impressions: ClinicSearchImpression[] = response.results.map(
       (result) => ({
